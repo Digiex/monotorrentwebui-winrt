@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoTorrent.ClientService", "MonoTorrent.ClientService\MonoTorrent.ClientService.csproj", "{FA02B877-30A8-4418-8C61-6A943B8A2000}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JSONSharp", "JSONSharp\JSONSharp.csproj", "{B9D6AEF4-70AF-4480-B119-27E4AF4EA549}"
+EndProject
+Global
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 3
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = https://tfs09.codeplex.com/
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = JSONSharp\\JSONSharp.csproj
+		SccProjectName1 = JSONSharp
+		SccLocalPath1 = JSONSharp
+		SccProjectUniqueName2 = MonoTorrent.ClientService\\MonoTorrent.ClientService.csproj
+		SccProjectName2 = MonoTorrent.ClientService
+		SccLocalPath2 = MonoTorrent.ClientService
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+		Stats|Any CPU = Stats|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FA02B877-30A8-4418-8C61-6A943B8A2000}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FA02B877-30A8-4418-8C61-6A943B8A2000}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FA02B877-30A8-4418-8C61-6A943B8A2000}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FA02B877-30A8-4418-8C61-6A943B8A2000}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FA02B877-30A8-4418-8C61-6A943B8A2000}.Stats|Any CPU.ActiveCfg = Release|Any CPU
+		{FA02B877-30A8-4418-8C61-6A943B8A2000}.Stats|Any CPU.Build.0 = Release|Any CPU
+		{B9D6AEF4-70AF-4480-B119-27E4AF4EA549}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9D6AEF4-70AF-4480-B119-27E4AF4EA549}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9D6AEF4-70AF-4480-B119-27E4AF4EA549}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9D6AEF4-70AF-4480-B119-27E4AF4EA549}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9D6AEF4-70AF-4480-B119-27E4AF4EA549}.Stats|Any CPU.ActiveCfg = Release|Any CPU
+		{B9D6AEF4-70AF-4480-B119-27E4AF4EA549}.Stats|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
