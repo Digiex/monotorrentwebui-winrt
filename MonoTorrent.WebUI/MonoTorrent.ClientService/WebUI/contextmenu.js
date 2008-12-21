@@ -1,1 +1,130 @@
-var CMENU_SEP=0;var CMENU_CHILD=1;var CMENU_SEL=2;var CMENU_CHECK=3;var LI=new Element("li");var ContextMenu={init:function(A){this.obj=new Element("ul",{id:A,"class":"CMenu"}).addEvent("mouseenter",function(){ContextMenu.focused=true}).addEvent("mouseleave",function(){ContextMenu.focused=false}).inject(document.body)},hideAfterClick:true,hidden:true,focused:false,launched:false,add:function(){var F=$A(arguments);var H,E,I;var J=F[0];if($type(J)=="element"){if(!J.hasClass("CMenu")){return }F.splice(0,1)}else{J=this.obj}for(var C=0,B=F.length;C<B;C++){I=LI.clone(false);H=new Element("a");if(F[C][0]===CMENU_SEP){I.adopt(new Element("div",{"class":"hr"}))}else{if(F[C][0]===CMENU_CHILD){E=new Element("ul");E.addClass("CMenu");H.addClass("exp");H.set("html",F[C][1]);I.adopt(H);for(var A=0,D=F[C][2].length;A<D;A++){this.add(E,F[C][2][A])}I.adopt(E)}else{if(F[C][0]===CMENU_SEL){H.addClass("sel");H.set("html",F[C][1]);I.adopt(H)}else{if(F[C][0]===CMENU_CHECK){H.addClass("check");H.setProperty("href","#");var G=F[C][2];H.addEvent("click",function(K){K.stop();G();if(ContextMenu.hideAfterClick){ContextMenu.hide()}});H.set("html",F[C][1]);I.adopt(H)}else{if(!$defined(F[C][1])){H.addClass("dis");H.set("html",F[C][0]);I.adopt(H)}else{H.setProperty("href","#");var G=F[C][1];H.addEvent("click",function(K){K.stop();G();if(ContextMenu.hideAfterClick){ContextMenu.hide()}});H.set("html",F[C][0]);I.adopt(H)}}}}}J.adopt(I)}},clear:function(){this.obj.empty();this.hideAfterClick=true},show:function(D){this.obj.setStyle("visibility","hidden");this.obj.show();var A=D.x+8;var C=this.obj.getSize();var B=window.getSize();if(A+C.x>B.x){A-=C.x}var E=D.y+8;if(E+C.y>B.y){E-=C.y}this.obj.setStyles({left:A,top:E,visibility:"visible"});this.hidden=false;this.focused=false;this.launched=true},hide:function(){this.obj.setStyles({visibility:"hidden",display:"none",left:0,top:0});this.hidden=true;this.focused=false;this.launched=false;this.clear.delay(20,this)}};
+/*
+ *
+ *     Copyright 2007 BitTorrent, Inc. All rights reserved.
+ *     Copyright 2008 Carsten Niebuhr
+ *
+*/
+
+var CMENU_SEP = 0;
+var CMENU_CHILD = 1;
+var CMENU_SEL = 2;
+var CMENU_CHECK = 3;
+var LI = new Element("li");
+
+var ContextMenu = {
+
+	"init": function(id) {
+		this.obj = new Element("ul", {
+			"id": id,
+			"class": "CMenu"
+		}).addEvent("mouseenter", function() {
+			ContextMenu.focused = true;
+		}).addEvent("mouseleave", function() {
+			ContextMenu.focused = false;
+		}).inject(document.body);
+	},
+	
+	"hideAfterClick": true,
+	
+	"hidden": true,
+	
+	"focused": false,
+	
+	"launched": false,
+
+	"add": function() {
+		var args = $A(arguments);
+		var link, ul, li;
+		var ele = args[0];
+		if ($type(ele) == "element") {
+			if (!ele.hasClass("CMenu")) return;
+			args.splice(0, 1);
+		} else {
+			ele = this.obj;
+		}
+		for (var i = 0, j = args.length; i < j; i++) {
+			li = LI.clone(false);
+			link = new Element("a");
+			if (args[i][0] === CMENU_SEP) {
+				li.adopt(new Element("div", {"class": "hr"}));
+			} else if (args[i][0] === CMENU_CHILD) {
+				ul = new Element("ul");
+				ul.addClass("CMenu");
+				link.addClass("exp");
+				link.set("html", args[i][1]);
+				li.adopt(link);
+				for (var k = 0, len = args[i][2].length; k < len; k++)
+					this.add(ul, args[i][2][k]);
+				li.adopt(ul);
+			} else if (args[i][0] === CMENU_SEL) {
+				link.addClass("sel");
+				link.set("html", args[i][1]);
+				li.adopt(link);
+			} else if (args[i][0] === CMENU_CHECK) {
+				link.addClass("check");
+				link.setProperty("href", "#");
+				var fn = args[i][2];
+				link.addEvent("click", function(ev) {
+					ev.stop();
+					fn();
+					if (ContextMenu.hideAfterClick)
+						ContextMenu.hide();
+				});
+				link.set("html", args[i][1]);
+				li.adopt(link);
+			} else if (!$defined(args[i][1])) {
+				link.addClass("dis");
+				link.set("html", args[i][0]);
+				li.adopt(link);
+			} else {
+				link.setProperty("href", "#");
+				var fn = args[i][1];
+				link.addEvent("click", function(ev) {
+					ev.stop();
+					fn();
+					if (ContextMenu.hideAfterClick)
+						ContextMenu.hide();
+				});
+				link.set("html", args[i][0]);
+				li.adopt(link);
+			}
+			ele.adopt(li);
+		} 
+	},
+
+	"clear": function() {
+		this.obj.empty();
+		this.hideAfterClick = true;
+	},
+	
+	"show": function(p) {
+		this.obj.setStyle("visibility", "hidden");
+		this.obj.show();
+		var x = p.x + 8;
+		var size = this.obj.getSize();
+		var winSize = window.getSize();
+		if (x + size.x > winSize.x)
+			x -= size.x;
+		var y = p.y + 8;
+		if (y + size.y > winSize.y)
+			y -= size.y;
+		this.obj.setStyles({"left": x, "top": y, "visibility": "visible"});
+		this.hidden = false;
+		this.focused = false;
+		this.launched = true;
+	},
+	
+	"hide": function() {
+		this.obj.setStyles({
+			"visibility": "hidden",
+			"display": "none",
+			"left": 0,
+			"top": 0
+		});
+		this.hidden = true;
+		this.focused = false;
+		this.launched = false;
+		this.clear.delay(20, this);
+	}
+
+};
