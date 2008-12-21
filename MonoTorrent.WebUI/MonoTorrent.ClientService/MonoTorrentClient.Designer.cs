@@ -1,6 +1,6 @@
 ﻿namespace MonoTorrent.ClientService
 {
-    partial class MonoTorrentClient<TID>
+    partial class MonoTorrentClient
     {
         /// <summary> 
         /// Required designer variable.

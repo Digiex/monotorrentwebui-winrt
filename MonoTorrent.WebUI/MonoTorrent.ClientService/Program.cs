@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.ServiceProcess;
 using System.Configuration;
 using System.IO;
+using Newtonsoft.Json;
 
 namespace MonoTorrent.ClientService
 {
@@ -13,40 +14,41 @@ namespace MonoTorrent.ClientService
         /// </summary>
         static void Main()
         {
-            //ServiceBase[] ServicesToRun;
-            //ServicesToRun = new ServiceBase[] 
+            //MonoTorrentClient client = new MonoTorrentClient();
+            //ServiceBase[] servicesToRun = new ServiceBase[] 
             //{ 
-            //    new MonoTorrentClientService(),
-            //    new ClientWebUI(filesWebUI, webUIport, service)
+            //    client,
+            //    new ClientWebUI(filesWebUI, webUIport, client)
             //};
-            //ServiceBase.Run(ServicesToRun);
+            //ServiceBase.Run(servicesToRun);
 
             Trace.Listeners.Add(new ConsoleTraceListener());
 
-            int webUIport = int.Parse(ConfigurationManager.AppSettings["WebUI.Port"]);
+            string listenPrefix = ConfigurationManager.AppSettings["WebUI.HttpListenerPrefix"];
             DirectoryInfo filesWebUI = new DirectoryInfo(ConfigurationManager.AppSettings["WebUI.Files"]);
-            if (!filesWebUI.Exists)
-                throw new Exception("WebUI directory does not exist.");
 
-            MonoTorrentClient<string> service = new MonoTorrentClient<string>();
-            ClientWebUI webUI = new ClientWebUI(filesWebUI, webUIport, service);
+            MonoTorrentClient service = new MonoTorrentClient();
+            ClientWebUI webUI = new ClientWebUI(filesWebUI, listenPrefix, service);
 
-            Console.WriteLine("Starting Service...");
+            Console.WriteLine("Starting MonoTorrent engine...");
             service.StartService();
-            Console.WriteLine("Service Started.");
+            Console.WriteLine("MonoTorrent engine started.");
 
             Console.WriteLine("Starting WebUI...");
             webUI.StartService();
-            Console.WriteLine("WebUI Started.");
+            Console.WriteLine("WebUI started.");
 
             while (Console.ReadKey().Key != ConsoleKey.Escape) { }
 
             Console.WriteLine("Stopping WebUI...");
             webUI.StopService();
-            Console.WriteLine("WebUI Stopped.");
+            Console.WriteLine("WebUI stopped.");
 
-            Console.WriteLine("Stopping Service...");
+            Console.WriteLine("Stopping MonoTorrent engine...");
             service.StopService();
+            Console.WriteLine("MonoTorrent engine stopped.");
+
+            Console.ReadKey();
         }
     }
 }

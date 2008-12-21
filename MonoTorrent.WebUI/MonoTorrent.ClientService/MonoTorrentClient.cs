@@ -14,13 +14,17 @@ using MonoTorrent.Client.Encryption;
 
 namespace MonoTorrent.ClientService
 {
+    /// <summary>
+    /// Long-lived service which runs 
+    /// </summary>
+    /// <typeparam name="TID"></typeparam>
     [SecurityPermission(SecurityAction.Demand, Flags = SecurityPermissionFlag.RemotingConfiguration)]
-    public partial class MonoTorrentClient<TID> : ServiceBase, IEnumerable<KeyValuePair<TID, TorrentManager>> //, MonoTorrent.Service.IServiceController<TID>
+    public partial class MonoTorrentClient : ServiceBase//, MonoTorrent.Service.IServiceController<TID>
     {
         //ObjRef objRef = null;
 
         ClientEngine client;
-        Dictionary<TID, TorrentManager> torrents;
+        Dictionary<string, TorrentManager> torrents;
 
         string DataDirectory;
         IPEndPoint ListenEndpoint;
@@ -34,7 +38,7 @@ namespace MonoTorrent.ClientService
         {
             InitializeComponent();
 
-            torrents = new Dictionary<TID, TorrentManager>();
+            torrents = new Dictionary<string, TorrentManager>();
 
             LoadAppSettings();
             
@@ -79,12 +83,13 @@ namespace MonoTorrent.ClientService
             client.Settings.AllowedEncryption = EncryptionFlags;
         }
 
+        #region Service Control
         protected override void OnStart(string[] args)
         {
             //string configFile = Path.Combine(
             //    AppDomain.CurrentDomain.BaseDirectory, "MonoTorrent.ClientService.exe.config"
             //    );
-            
+
             //RemotingConfiguration.Configure(configFile, false);
             //objRef = RemotingServices.Marshal(this, "MonoTorrentClientService.rem");
         }
@@ -123,20 +128,24 @@ namespace MonoTorrent.ClientService
         }
 
         #region Debug methods
+        [Conditional("DEBUG")]
         public void StartService()
         {
             OnStart(new string[] { });
         }
 
+        [Conditional("DEBUG")]
         public void StopService()
         {
             OnStop();
         }
         #endregion
 
+        #endregion
+
         #region IServiceController Members
 
-        public TID AddTorrent(Torrent torrent, TID torrentInstanceID, string savePath, string baseDirectory,
+        public TorrentManager AddTorrent(Torrent torrent, string torrentInstanceID, string savePath, string baseDirectory,
             int uploadSlots, 
             int maxConnections, 
             int maxDownloadSpeed, 
@@ -171,42 +180,24 @@ namespace MonoTorrent.ClientService
 
             WriteTrace("Torrent \"{0}\" added.", torrent.Name);
 
-            return torrentInstanceID;
+            return mgr;
         }
 
-        public TID AddTorrent(Uri source, string savePath, string baseDirectory, int uploadSlots, int maxConnections, int maxDownloadSpeed, int maxUploadSpeed, bool initialSeedingEnabled)
-        {
-            WebClient web = new WebClient();
-            using (Stream data = web.OpenRead(source))
-            {
-                Torrent torrent = Torrent.Load(data);
-
-                //TODO: Implementation specific... fix it!
-                TID torrentInstanceID = (TID)Convert.ChangeType(Toolbox.ToHex(torrent.InfoHash), typeof(TID));
-
-                return AddTorrent(torrent,
-                    torrentInstanceID,
-                    savePath, baseDirectory,
-                    uploadSlots, maxConnections, maxDownloadSpeed, maxUploadSpeed,
-                    initialSeedingEnabled);
-            }
-        }
-
-        public TID AddTorrent(byte[] metaData, string savePath, string baseDirectory, int uploadSlots, int maxConnections, int maxDownloadSpeed, int maxUploadSpeed, bool initialSeedingEnabled)
+        public TorrentManager AddTorrent(Stream metaData, string savePath, string baseDirectory, int uploadSlots, int maxConnections, int maxDownloadSpeed, int maxUploadSpeed, bool initialSeedingEnabled)
         {
             Torrent torrent = Torrent.Load(metaData);
 
             //TODO: Implementation specific... fix it!
-            TID torrentInstanceID = (TID)Convert.ChangeType(Toolbox.ToHex(torrent.InfoHash), typeof(TID));
-            
-            return AddTorrent(torrent, 
+            string torrentInstanceID = (string)Convert.ChangeType(Toolbox.ToHex(torrent.InfoHash), typeof(string));
+
+            return AddTorrent(torrent,
                 torrentInstanceID,
-                savePath, baseDirectory, 
-                uploadSlots, maxConnections, maxDownloadSpeed, maxUploadSpeed, 
+                savePath, baseDirectory,
+                uploadSlots, maxConnections, maxDownloadSpeed, maxUploadSpeed,
                 initialSeedingEnabled);
         }
 
-        public void RemoveTorrent(TID torrentInstance, bool removeData)
+        public void RemoveTorrent(string torrentInstance, bool removeData)
         {
             TorrentManager torrent;
             if (!torrents.TryGetValue(torrentInstance, out torrent))
@@ -215,11 +206,15 @@ namespace MonoTorrent.ClientService
             torrent.Stop().WaitOne();
 
             client.Unregister(torrent);
+            torrents.Remove(torrentInstance);
+
+            //if (removeData)
+            //    Directory.Delete(torrent.SavePath);
 
             WriteTrace("Torrent \"{0}\" removed.", torrent.Torrent.Name);
         }
 
-        public void Start(TID torrentInstance)
+        public void Start(string torrentInstance)
         {
             TorrentManager torrent;
             if (!torrents.TryGetValue(torrentInstance, out torrent))
@@ -230,7 +225,7 @@ namespace MonoTorrent.ClientService
             WriteTrace("Torrent \"{0}\" started.", torrent.Torrent.Name);
         }
 
-        public void Stop(TID torrentInstance)
+        public void Stop(string torrentInstance)
         {
             TorrentManager torrent;
             if (!torrents.TryGetValue(torrentInstance, out torrent))
@@ -241,7 +236,7 @@ namespace MonoTorrent.ClientService
             WriteTrace("Torrent \"{0}\" stopped.", torrent.Torrent.Name);
         }
 
-        public void Pause(TID torrentInstance)
+        public void Pause(string torrentInstance)
         {
             TorrentManager torrent;
             if (!torrents.TryGetValue(torrentInstance, out torrent))
@@ -320,7 +315,7 @@ namespace MonoTorrent.ClientService
             }
         }
 
-        public void SetFilePriority(TID torrentInstanceID, int[] fileIndexes, Priority priority)
+        public void SetFilePriority(string torrentInstanceID, int[] fileIndexes, Priority priority)
         {
             TorrentManager torrent;
             if (!torrents.TryGetValue(torrentInstanceID, out torrent))
@@ -380,7 +375,7 @@ namespace MonoTorrent.ClientService
             Trace.WriteLine(String.Format(format, args));
         }
 
-        internal TorrentManager GetTorrentDetails(TID torrentInstanceID)
+        internal TorrentManager GetTorrentDetails(string torrentInstanceID)
         {
             TorrentManager mgr;
             if (!torrents.TryGetValue(torrentInstanceID, out mgr))
@@ -394,18 +389,9 @@ namespace MonoTorrent.ClientService
             get { return torrents.Count; }
         }
 
-        #region IEnumerable<TorrentManager> Members
-
-        public IEnumerator<KeyValuePair<TID, TorrentManager>> GetEnumerator()
+        public IEnumerator<KeyValuePair<string, TorrentManager>> GetTorrentEnumerator()
         {
             return torrents.GetEnumerator();
         }
-
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-        {
-            return torrents.GetEnumerator();
-        }
-
-        #endregion
     }
 }
