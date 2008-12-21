@@ -79,91 +79,261 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="WebUI\contextmenu.js" />
-    <Content Include="WebUI\favicon.ico" />
-    <Content Include="WebUI\guest.html" />
-    <Content Include="WebUI\images\about.png" />
-    <Content Include="WebUI\images\arrow.gif" />
-    <Content Include="WebUI\images\blank.gif" />
-    <Content Include="WebUI\images\button.png" />
-    <Content Include="WebUI\images\close.png" />
-    <Content Include="WebUI\images\delete.png" />
-    <Content Include="WebUI\images\error.png" />
-    <Content Include="WebUI\images\folder.png" />
-    <Content Include="WebUI\images\folder_explore.png" />
-    <Content Include="WebUI\images\header.png" />
-    <Content Include="WebUI\images\label.png" />
-    <Content Include="WebUI\images\ldbg.png" />
-    <Content Include="WebUI\images\menucheck.png" />
-    <Content Include="WebUI\images\menuexp.png" />
-    <Content Include="WebUI\images\menusel.png" />
-    <Content Include="WebUI\images\mootools.png" />
-    <Content Include="WebUI\images\nextprev.png" />
-    <Content Include="WebUI\images\props.png" />
-    <Content Include="WebUI\images\settings.png" />
-    <Content Include="WebUI\images\snake.gif" />
-    <Content Include="WebUI\images\table_refresh.png" />
-    <Content Include="WebUI\images\tbar.png" />
-    <Content Include="WebUI\images\toolbar.png" />
-    <Content Include="WebUI\images\tstatus.png" />
-    <Content Include="WebUI\images\ut.png" />
-    <Content Include="WebUI\images\world.png" />
-    <Content Include="WebUI\images\zoom.png" />
-    <Content Include="WebUI\index.html" />
-    <Content Include="WebUI\lang\ar.js" />
-    <Content Include="WebUI\lang\be.js" />
-    <Content Include="WebUI\lang\bg.js" />
-    <Content Include="WebUI\lang\bs.js" />
-    <Content Include="WebUI\lang\ca.js" />
-    <Content Include="WebUI\lang\cs.js" />
-    <Content Include="WebUI\lang\de.js" />
-    <Content Include="WebUI\lang\dk.js" />
-    <Content Include="WebUI\lang\el.js" />
-    <Content Include="WebUI\lang\en.js" />
-    <Content Include="WebUI\lang\es.js" />
-    <Content Include="WebUI\lang\et.js" />
-    <Content Include="WebUI\lang\fi.js" />
-    <Content Include="WebUI\lang\fr.js" />
-    <Content Include="WebUI\lang\fyNL.js" />
-    <Content Include="WebUI\lang\ga.js" />
-    <Content Include="WebUI\lang\ge.js" />
-    <Content Include="WebUI\lang\gl.js" />
-    <Content Include="WebUI\lang\he.js" />
-    <Content Include="WebUI\lang\hu.js" />
-    <Content Include="WebUI\lang\is.js" />
-    <Content Include="WebUI\lang\it.js" />
-    <Content Include="WebUI\lang\jp.js" />
-    <Content Include="WebUI\lang\ko.js" />
-    <Content Include="WebUI\lang\lv.js" />
-    <Content Include="WebUI\lang\nl.js" />
-    <Content Include="WebUI\lang\nnNO.js" />
-    <Content Include="WebUI\lang\no.js" />
-    <Content Include="WebUI\lang\pl.js" />
-    <Content Include="WebUI\lang\pt.js" />
-    <Content Include="WebUI\lang\ptBR.js" />
-    <Content Include="WebUI\lang\ro.js" />
-    <Content Include="WebUI\lang\ru.js" />
-    <Content Include="WebUI\lang\sk.js" />
-    <Content Include="WebUI\lang\sl.js" />
-    <Content Include="WebUI\lang\sq.js" />
-    <Content Include="WebUI\lang\sv.js" />
-    <Content Include="WebUI\lang\th.js" />
-    <Content Include="WebUI\lang\tu.js" />
-    <Content Include="WebUI\lang\tw.js" />
-    <Content Include="WebUI\lang\va.js" />
-    <Content Include="WebUI\lang\vi.js" />
-    <Content Include="WebUI\lang\zhCN.js" />
-    <Content Include="WebUI\lang\zhTW.js" />
-    <Content Include="WebUI\main.css" />
-    <Content Include="WebUI\main.js" />
-    <Content Include="WebUI\mootools.js" />
-    <Content Include="WebUI\stable.css" />
-    <Content Include="WebUI\stable.js" />
-    <Content Include="WebUI\StaticSettings.txt" />
-    <Content Include="WebUI\tabs.js" />
-    <Content Include="WebUI\temp.js" />
-    <Content Include="WebUI\utils.js" />
-    <Content Include="WebUI\webui.js" />
+    <Content Include="WebUI\contextmenu.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\favicon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\guest.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\about.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\arrow.gif">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\blank.gif">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\button.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\close.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\delete.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\error.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\folder.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\folder_explore.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\header.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\label.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\ldbg.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\menucheck.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\menuexp.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\menusel.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\mootools.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\nextprev.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\props.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\settings.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\snake.gif">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\table_refresh.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\tbar.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\toolbar.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\tstatus.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\ut.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\world.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\images\zoom.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\index.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\ar.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\be.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\bg.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\bs.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\ca.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\cs.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\de.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\dk.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\el.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\en.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\es.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\et.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\fi.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\fr.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\fyNL.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\ga.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\ge.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\gl.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\he.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\hu.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\is.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\it.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\jp.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\ko.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\lv.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\nl.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\nnNO.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\no.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\pl.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\pt.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\ptBR.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\ro.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\ru.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\sk.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\sl.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\sq.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\sv.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\th.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\tu.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\tw.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\va.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\vi.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\zhCN.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\lang\zhTW.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\main.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\main.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\mootools.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\stable.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\stable.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\StaticSettings.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\tabs.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\temp.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\utils.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\webui.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
@@ -174,7 +344,7 @@
   </Target>
   -->
   <PropertyGroup>
-    <PostBuildEvent>mkdir "$(TargetDir)WebUI\"
-copy "$(ProjectDir)WebUI\*" "$(TargetDir)WebUI\" /Y</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
 </Project>
