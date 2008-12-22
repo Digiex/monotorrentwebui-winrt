@@ -5,9 +5,7 @@ using System.Threading;
 using System.Diagnostics;
 using System.Configuration;
 using System.ServiceProcess;
-//using System.Runtime.Remoting;
 using System.Collections.Generic;
-using System.Security.Permissions;
 using MonoTorrent.Common;
 using MonoTorrent.Client;
 using MonoTorrent.Client.Encryption;
@@ -15,49 +13,51 @@ using MonoTorrent.Client.Encryption;
 namespace MonoTorrent.ClientService
 {
     /// <summary>
-    /// Long-lived service which runs 
+    /// Service which runs the MonoTorrent engine and provides an interface to control torrents.
     /// </summary>
-    /// <typeparam name="TID"></typeparam>
-    [SecurityPermission(SecurityAction.Demand, Flags = SecurityPermissionFlag.RemotingConfiguration)]
-    public partial class MonoTorrentClient : ServiceBase//, MonoTorrent.Service.IServiceController<TID>
+    public partial class MonoTorrentClient : ServiceBase
     {
-        //ObjRef objRef = null;
+        /// <summary>
+        /// MonoTorrent client engine.
+        /// </summary>
+        private ClientEngine client;
 
-        ClientEngine client;
-        Dictionary<string, TorrentManager> torrents;
+        /// <summary>
+        /// Mapping between string identifiers and TorrentManager instances.
+        /// </summary>
+        private Dictionary<string, TorrentManager> torrents;
 
-        string DataDirectory;
-        IPEndPoint ListenEndpoint;
-        int GlobalMaxConnections;
-        int GlobalMaxHalfOpenConnections;
-        int GlobalMaxDownloadSpeed;
-        int GlobalMaxUploadSpeed;
-        EncryptionTypes EncryptionFlags;
-
+        /// <summary>
+        /// Creates a new instance of MonoTorrentClient.
+        /// </summary>
         public MonoTorrentClient()
         {
             InitializeComponent();
 
             torrents = new Dictionary<string, TorrentManager>();
 
-            LoadAppSettings();
-            
-            EngineSettings settings = new EngineSettings(
-                DataDirectory, 
-                ListenEndpoint.Port, 
-                GlobalMaxConnections, 
-                GlobalMaxHalfOpenConnections,
-                GlobalMaxDownloadSpeed,
-                GlobalMaxUploadSpeed,
-                EncryptionFlags);
-
+            EngineSettings settings = LoadClientEngineSettings();
             client = new ClientEngine(settings);
         }
 
-        private void LoadAppSettings()
+        #region Settings
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns>EngineSettings instance.</returns>
+        private EngineSettings LoadClientEngineSettings()
         {
+            string DataDirectory;
+            IPEndPoint ListenEndpoint;
+            int GlobalMaxConnections;
+            int GlobalMaxHalfOpenConnections;
+            int GlobalMaxDownloadSpeed;
+            int GlobalMaxUploadSpeed;
+            EncryptionTypes EncryptionFlags;
+
             DataDirectory = ConfigurationManager.AppSettings["SaveDirectory"];
-            
+
             IPAddress listenAddress = IPAddress.Parse(ConfigurationManager.AppSettings["ListenAddress"]);
             int listenPort = int.Parse(ConfigurationManager.AppSettings["ListenPort"]);
             ListenEndpoint = new IPEndPoint(listenAddress, listenPort);
@@ -67,34 +67,70 @@ namespace MonoTorrent.ClientService
             GlobalMaxDownloadSpeed = int.Parse(ConfigurationManager.AppSettings["GlobalMaxDownloadSpeed"]);
             GlobalMaxUploadSpeed = int.Parse(ConfigurationManager.AppSettings["GlobalMaxUploadSpeed"]);
             EncryptionFlags = (EncryptionTypes)int.Parse(ConfigurationManager.AppSettings["EncryptionFlags"]);
+
+            EngineSettings settings = new EngineSettings(
+                DataDirectory,
+                ListenEndpoint.Port,
+                GlobalMaxConnections,
+                GlobalMaxHalfOpenConnections,
+                GlobalMaxDownloadSpeed,
+                GlobalMaxUploadSpeed,
+                EncryptionFlags);
+
+            return settings;
         }
 
-        private void ApplyAppSettings()
+        /// <summary>
+        /// Reads config file and applies the settings to ClientEngine.
+        /// </summary>
+        private void ReloadClientEngineSettings()
         {
+            string DataDirectory;
+            IPEndPoint ListenEndpoint;
+            int GlobalMaxConnections;
+            int GlobalMaxHalfOpenConnections;
+            int GlobalMaxDownloadSpeed;
+            int GlobalMaxUploadSpeed;
+            EncryptionTypes EncryptionFlags;
+
+            DataDirectory = ConfigurationManager.AppSettings["SaveDirectory"];
+
+            IPAddress listenAddress = IPAddress.Parse(ConfigurationManager.AppSettings["ListenAddress"]);
+            int listenPort = int.Parse(ConfigurationManager.AppSettings["ListenPort"]);
+            ListenEndpoint = new IPEndPoint(listenAddress, listenPort);
+
+            GlobalMaxConnections = int.Parse(ConfigurationManager.AppSettings["GlobalMaxConnections"]);
+            GlobalMaxHalfOpenConnections = int.Parse(ConfigurationManager.AppSettings["GlobalMaxHalfOpenConnections"]);
+            GlobalMaxDownloadSpeed = int.Parse(ConfigurationManager.AppSettings["GlobalMaxDownloadSpeed"]);
+            GlobalMaxUploadSpeed = int.Parse(ConfigurationManager.AppSettings["GlobalMaxUploadSpeed"]);
+            EncryptionFlags = (EncryptionTypes)int.Parse(ConfigurationManager.AppSettings["EncryptionFlags"]);
+
             client.Settings.SavePath = DataDirectory;
 
-            if(!client.Listener.Endpoint.Equals(ListenEndpoint))
+            if (!client.Listener.Endpoint.Equals(ListenEndpoint))
                 client.ChangeListenEndpoint(ListenEndpoint);
-            
+
             client.Settings.GlobalMaxConnections = GlobalMaxConnections;
             client.Settings.GlobalMaxHalfOpenConnections = GlobalMaxHalfOpenConnections;
             client.Settings.GlobalMaxDownloadSpeed = GlobalMaxDownloadSpeed;
             client.Settings.GlobalMaxUploadSpeed = GlobalMaxUploadSpeed;
             client.Settings.AllowedEncryption = EncryptionFlags;
         }
+        #endregion
 
-        #region Service Control
+        #region Service Control Interface
         protected override void OnStart(string[] args)
         {
-            //string configFile = Path.Combine(
-            //    AppDomain.CurrentDomain.BaseDirectory, "MonoTorrent.ClientService.exe.config"
-            //    );
-
-            //RemotingConfiguration.Configure(configFile, false);
-            //objRef = RemotingServices.Marshal(this, "MonoTorrentClientService.rem");
+            ReloadClientEngineSettings();
+            // TODO: Load torrents
         }
 
-        List<TorrentManager> massPaused = new List<TorrentManager>();
+        /// <summary>
+        /// List of torrents which were paused by OnPause().
+        /// Stored so that they can be resumed in OnContinue().
+        /// </summary>
+        private List<TorrentManager> massPaused = new List<TorrentManager>();
+
         protected override void OnPause()
         {
             massPaused.Clear();
@@ -118,13 +154,7 @@ namespace MonoTorrent.ClientService
 
         protected override void OnStop()
         {
-            //if (objRef != null)
-            //{
-            //    RemotingServices.Unmarshal(objRef);
-            //    objRef = null;
-            //}
-
-            StopAll();
+            StopAllTorrents();
         }
 
         #region Debug methods
@@ -143,157 +173,156 @@ namespace MonoTorrent.ClientService
 
         #endregion
 
-        #region IServiceController Members
+        #region Torrent Control Interface
 
-        public TorrentManager AddTorrent(Torrent torrent, string torrentInstanceID, string savePath, string baseDirectory,
+        private TorrentManager AddTorrent(Torrent torrent, string torrentID, string savePath, string baseDirectory,
             int uploadSlots, 
             int maxConnections, 
             int maxDownloadSpeed, 
             int maxUploadSpeed, 
-            bool initialSeedingEnabled)
+            bool superSeed)
         {
-            #region Validation
-            if (savePath != null && !savePath.StartsWith(DataDirectory))
-                throw new ArgumentException("Save path must descend from the base directory.", "savePath");
-
-            if (baseDirectory != null && baseDirectory.IndexOfAny(Path.GetInvalidPathChars()) > -1)
-                throw new ArgumentException("Base directory contains invalid characters.", "baseDirectory"); 
-            #endregion
+            // TODO: Add security checks on savePath
 
             TorrentSettings torrentSettings = new TorrentSettings(
                 uploadSlots, 
                 maxConnections, 
                 maxDownloadSpeed, 
                 maxUploadSpeed, 
-                initialSeedingEnabled
+                superSeed
                 );
             
             TorrentManager mgr;
-            if(String.IsNullOrEmpty(baseDirectory))
-                mgr = new TorrentManager(torrent, savePath ?? DataDirectory, torrentSettings);
+            if(baseDirectory == null)
+                mgr = new TorrentManager(torrent, savePath, torrentSettings);
             else
-                mgr = new TorrentManager(torrent, savePath ?? DataDirectory, torrentSettings, baseDirectory);
+                mgr = new TorrentManager(torrent, savePath, torrentSettings, baseDirectory);
 
             client.Register(mgr);
 
-            torrents.Add(torrentInstanceID, mgr);
+            torrents.Add(torrentID, mgr);
 
             WriteTrace("Torrent \"{0}\" added.", torrent.Name);
 
             return mgr;
         }
 
-        public TorrentManager AddTorrent(Stream metaData, string savePath, string baseDirectory, int uploadSlots, int maxConnections, int maxDownloadSpeed, int maxUploadSpeed, bool initialSeedingEnabled)
+        /// <summary>
+        /// Register the torrent with the MonoTorrent engine.
+        /// </summary>
+        /// <param name="torrentMetaData">Stream containing the .torrent file.</param>
+        /// <param name="savePath">Directory where to save the torrent.</param>
+        /// <param name="baseDirectory">Overrides the default directory or file name of the torrent.</param>
+        /// <param name="uploadSlots">The maximum number of upload slots for this torrent.</param>
+        /// <param name="maxConnections">The maxium number of connection for this torrent.</param>
+        /// <param name="maxDownloadSpeed">The maximum download speed for this torrent.</param>
+        /// <param name="maxUploadSpeed">The maximum upload speed for this torrent.</param>
+        /// <param name="initialSeedingEnabled">True to enable "super-seeding".</param>
+        /// <returns>TorrentManager responsible for the torrent.</returns>
+        public TorrentManager AddTorrent(Stream torrentMetaData, string savePath, string baseDirectory, 
+            int uploadSlots, 
+            int maxConnections, 
+            int maxDownloadSpeed, 
+            int maxUploadSpeed, 
+            bool superSeed)
         {
-            Torrent torrent = Torrent.Load(metaData);
+            Torrent torrent = Torrent.Load(torrentMetaData);
 
-            //TODO: Implementation specific... fix it!
-            string torrentInstanceID = (string)Convert.ChangeType(Toolbox.ToHex(torrent.InfoHash), typeof(string));
+            string torrentID = Toolbox.ToHex(torrent.InfoHash);
+            
+            if (savePath == null)
+                savePath = client.Settings.SavePath;
 
             return AddTorrent(torrent,
-                torrentInstanceID,
+                torrentID,
                 savePath, baseDirectory,
                 uploadSlots, maxConnections, maxDownloadSpeed, maxUploadSpeed,
-                initialSeedingEnabled);
+                superSeed);
         }
 
-        public void RemoveTorrent(string torrentInstance, bool removeData)
+        /// <summary>
+        /// Starts the specified torrent.
+        /// </summary>
+        /// <param name="torrentInfoHash">Identifier of the torrent.</param>
+        /// <returns>False when <paramref name="torrentInfoHash"/> is not registered, otherwise true.</returns>
+        public bool StartTorrent(string torrentInfoHash)
         {
             TorrentManager torrent;
-            if (!torrents.TryGetValue(torrentInstance, out torrent))
-                return;
-
-            torrent.Stop().WaitOne();
-
-            client.Unregister(torrent);
-            torrents.Remove(torrentInstance);
-
-            //if (removeData)
-            //    Directory.Delete(torrent.SavePath);
-
-            WriteTrace("Torrent \"{0}\" removed.", torrent.Torrent.Name);
-        }
-
-        public void Start(string torrentInstance)
-        {
-            TorrentManager torrent;
-            if (!torrents.TryGetValue(torrentInstance, out torrent))
-                return;
+            if (!torrents.TryGetValue(torrentInfoHash, out torrent))
+                return false;
 
             torrent.Start();
 
             WriteTrace("Torrent \"{0}\" started.", torrent.Torrent.Name);
+
+            return true;
         }
 
-        public void Stop(string torrentInstance)
+        /// <summary>
+        /// Pauses the specified torrent.
+        /// </summary>
+        /// <param name="torrentInfoHash">Identifier of the torrent.</param>
+        /// <returns>False when <paramref name="torrentInfoHash"/> is not registered, otherwise true.</returns>
+        public bool PauseTorrent(string torrentInfoHash)
         {
             TorrentManager torrent;
-            if (!torrents.TryGetValue(torrentInstance, out torrent))
-                return;
-
-            torrent.Stop();
-
-            WriteTrace("Torrent \"{0}\" stopped.", torrent.Torrent.Name);
-        }
-
-        public void Pause(string torrentInstance)
-        {
-            TorrentManager torrent;
-            if (!torrents.TryGetValue(torrentInstance, out torrent))
-                return;
+            if (!torrents.TryGetValue(torrentInfoHash, out torrent))
+                return false;
 
             torrent.Pause();
 
             WriteTrace("Torrent \"{0}\" paused.", torrent.Torrent.Name);
+
+            return true;
         }
 
-        //public TransferInfo<TID>[] GetTorrents()
-        //{
-        //    List<TransferInfo<TID>> transfers = new List<TransferInfo<TID>>(client.TorrentCount);
+        /// <summary>
+        /// Stops the specified torrent.
+        /// </summary>
+        /// <param name="torrentInfoHash">Identifier of the torrent.</param>
+        /// <returns>False when <paramref name="torrentInfoHash"/> is not registered, otherwise true.</returns>
+        public bool StopTorrent(string torrentInfoHash)
+        {
+            TorrentManager torrent;
+            if (!torrents.TryGetValue(torrentInfoHash, out torrent))
+                return false;
 
-        //    foreach(KeyValuePair<TID, TorrentManager> pair in torrents)
-        //    {
-        //        TID id = pair.Key;
-        //        TorrentManager mgr = pair.Value;
-                
-        //        TransferInfo<TID> info = new TransferInfo<TID>()
-        //        {
-        //            InstanceID = id,
-        //            Name = mgr.Torrent.Name,
-        //            Progress = mgr.Progress,
-        //            Size  = 0,
-        //            State = CalculateState(mgr),
-        //            Seeds = mgr.Peers.Seeds,
-        //            Peers = mgr.Peers.Leechs,
-        //            DownloadRate = mgr.Monitor.DownloadSpeed,
-        //            UploadRate = mgr.Monitor.UploadSpeed,
-        //            DataBytesDownloaded = mgr.Monitor.DataBytesDownloaded,
-        //            DataBytesUploaded = mgr.Monitor.DataBytesUploaded
-        //        };
+            torrent.Stop().WaitOne();
 
-        //        transfers.Add(info);
-        //    }
+            WriteTrace("Torrent \"{0}\" stopped.", torrent.Torrent.Name);
 
-        //    WriteTrace("Torrent list of {0} contructed.", transfers.Count);
+            return true;
+        }
 
-        //    return transfers.ToArray();
-        //}
+        /// <summary>
+        /// Removes the specified torrent.
+        /// </summary>
+        /// <param name="torrentInfoHash">Identifier of the torrent.</param>
+        /// <param name="removeData">True to also remove any downloaded data files.</param>
+        /// <returns>False when <paramref name="torrentInfoHash"/> is not registered, otherwise true.</returns>
+        public bool RemoveTorrent(string torrentInfoHash, bool removeData)
+        {
+            TorrentManager torrent;
+            if (!torrents.TryGetValue(torrentInfoHash, out torrent))
+                return false;
 
-        //private TransferState CalculateState(TorrentManager mgr)
-        //{
-        //    switch(mgr.State)
-        //    {
-        //        case TorrentState.Downloading:  return TransferState.Downloading;
-        //        case TorrentState.Seeding:      return TransferState.Seeding;
-        //        case TorrentState.Paused:       return TransferState.Paused;
-        //        case TorrentState.Stopped:      return mgr.Complete ? TransferState.Done : TransferState.Stopped;
-        //        case TorrentState.Stopping:     return TransferState.Stopping;
-        //        case TorrentState.Hashing:      return TransferState.Hashing;
-        //        default:                        return TransferState.Unknown;
-        //    }
-        //}
+            torrent.Stop().WaitOne();
 
-        public void StopAll()
+            client.Unregister(torrent);
+            torrents.Remove(torrentInfoHash);
+
+            //if (removeData)
+            //    Directory.Delete(torrent.SavePath);
+            
+            WriteTrace("Torrent \"{0}\" removed.", torrent.Torrent.Name);
+
+            return true;
+        }
+        
+        /// <summary>
+        /// Stops all torrents.
+        /// </summary>
+        public void StopAllTorrents()
         {
             WaitHandle[] stopHandles = client.StopAll();
             
@@ -301,12 +330,18 @@ namespace MonoTorrent.ClientService
                 WaitHandle.WaitAll(stopHandles);
         }
 
-        public void PauseAll()
+        /// <summary>
+        /// Pauses all torrents.
+        /// </summary>
+        public void PauseAllTorrents()
         {
             client.PauseAll();
         }
 
-        public void ResumeAll()
+        /// <summary>
+        /// Starts all paused torrensts.
+        /// </summary>
+        public void ResumeAllTorrents()
         {
             foreach(TorrentManager mgr in torrents.Values)
             {
@@ -315,11 +350,18 @@ namespace MonoTorrent.ClientService
             }
         }
 
-        public void SetFilePriority(string torrentInstanceID, int[] fileIndexes, Priority priority)
+        /// <summary>
+        /// Sets priority of the specified files within the specified torrent.
+        /// </summary>
+        /// <param name="torrentInfoHash">Identifier of the torrent.</param>
+        /// <param name="fileIndexes">Indexes of files to which the priority will be assigned.</param>
+        /// <param name="priority">Priority to assign to the specified files.</param>
+        /// <returns>False when <paramref name="torrentInfoHash"/> is not registered, otherwise true.</returns>
+        public bool SetFilePriority(string torrentInfoHash, int[] fileIndexes, Priority priority)
         {
             TorrentManager torrent;
-            if (!torrents.TryGetValue(torrentInstanceID, out torrent))
-                return;
+            if (!torrents.TryGetValue(torrentInfoHash, out torrent))
+                return false;
 
             foreach (int i in fileIndexes)
             {
@@ -327,71 +369,51 @@ namespace MonoTorrent.ClientService
             }
 
             WriteTrace("Torrent \"{0}\" priority set to {1}.", torrent.Torrent.Name, priority);
+
+            return true;
         }
 
-        //public TransferInfo<TID> GetTorrentDetails(TID torrentInstanceID)
-        //{
-        //    TorrentManager mgr;
-        //    if (!torrents.TryGetValue(torrentInstanceID, out mgr))
-        //        return null;
-
-        //    List<TransferFileInfo> files = new List<TransferFileInfo>(mgr.FileManager.Files.Length);
-
-        //    foreach (TorrentFile file in mgr.FileManager.Files)
-        //    {
-        //        TransferFileInfo fileInfo = new TransferFileInfo() 
-        //        {
-        //            Path = file.Path,
-        //            Length = file.Length,
-        //            Priority = (TransferFilePriority)file.Priority
-        //        };
-
-        //        files.Add(fileInfo);
-        //    }
-
-        //    TransferInfo<TID> info = new TransferInfo<TID>()
-        //    {
-        //        InstanceID = torrentInstanceID,
-        //        Name = mgr.Torrent.Name,
-        //        Progress = mgr.Progress,
-        //        Size = 0,
-        //        State = CalculateState(mgr),
-        //        Seeds = mgr.Peers.Seeds,
-        //        Peers = mgr.Peers.Leechs,
-        //        DownloadRate = mgr.Monitor.DownloadSpeed,
-        //        UploadRate = mgr.Monitor.UploadSpeed,
-        //        DataBytesDownloaded = mgr.Monitor.DataBytesDownloaded,
-        //        DataBytesUploaded = mgr.Monitor.DataBytesUploaded,
-        //        Files = files.ToArray()
-        //    };
-
-        //    return info;
-        //}
-
-        #endregion
-        
-        private static void WriteTrace(string format, params object[] args)
-        {
-            Trace.WriteLine(String.Format(format, args));
-        }
-
-        internal TorrentManager GetTorrentDetails(string torrentInstanceID)
+        /// <summary>
+        /// Retrieves the torrent manager based on the identifier string.
+        /// The returned instance should be used as read-only, use provided API to control torrents.
+        /// </summary>
+        /// <param name="torrentInfoHash">Identifier of the torrent.</param>
+        /// <returns>The instance corresponding to the <paramref name="torrentInfoHash"/>, otherwise null.</returns>
+        public TorrentManager GetTorrentManager(string torrentInfoHash)
         {
             TorrentManager mgr;
-            if (!torrents.TryGetValue(torrentInstanceID, out mgr))
+            if (!torrents.TryGetValue(torrentInfoHash, out mgr))
                 return null;
 
             return mgr;
         }
 
-        public int Count
+        #endregion
+
+        #region Trace Methods
+        private static void WriteTrace(string format, params object[] args)
+        {
+            Trace.WriteLine(String.Format(format, args));
+        } 
+        #endregion
+
+        #region Miscellaneous
+        /// <summary>
+        /// Number of registered torrents.
+        /// </summary>
+        public int TorrentCount
         {
             get { return torrents.Count; }
         }
 
-        public IEnumerator<KeyValuePair<string, TorrentManager>> GetTorrentEnumerator()
+        /// <summary>
+        /// Enumerator for registered identifier:torrents pairs.
+        /// TorrentManager should be treated as read-only, use the provided API to control torrents.
+        /// </summary>
+        public IEnumerable<KeyValuePair<string, TorrentManager>> TorrentManagers
         {
-            return torrents.GetEnumerator();
-        }
+            get { return torrents; }
+        } 
+        #endregion
     }
 }

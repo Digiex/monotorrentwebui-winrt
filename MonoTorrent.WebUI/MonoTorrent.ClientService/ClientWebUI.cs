@@ -11,27 +11,44 @@ using System.Text.RegularExpressions;
 using MonoTorrent.Common;
 using MonoTorrent.Client;
 using Newtonsoft.Json;
+using System.Diagnostics;
 
 namespace MonoTorrent.ClientService
 {
     /// <summary>
-    /// This service exposes a webserver to communicate with WebUI.
+    /// This service runs a webserver which is a nackend for WebUI.
     /// </summary>
     partial class ClientWebUI : ServiceBase
     {
-        HttpListener listener;
-        bool stopFlag = false;
-        AutoResetEvent stopHandle = new AutoResetEvent(true);
-
-        MonoTorrentClient service;
-        DirectoryInfo webui;
-
         private const string urlBase = "/gui/";
+        private const string urlBaseWithQuery = "/gui/?";
+        private const string urlBaseNoSlash = "/gui";
+        private const string urlBaseNoSlashQuery = "/gui?";
         private const string indexFile = "index.html";
         private const string tokenFile = "token.html";
 
+        /// <summary>
+        /// Mini webserver
+        /// </summary>
+        HttpListener listener;
+        
+        /// <summary>
+        /// Service which is running the MonoTorrent engine
+        /// </summary>
+        MonoTorrentClient service;
+
+        /// <summary>
+        /// WebUI files found here
+        /// </summary>
+        DirectoryInfo webui;
+
+        // Cache the index document as an XmlDocument because 
+        // XmlDocument.Load() takes too long to process for each request
+        private XmlDocument indexDocument;
+        private XmlNode indexTokenNode;
+
         #region Validation Regexes
-        private const string dnsNameRegex = @"([a-zA-Z0-9][a-zA-Z0-9\-.]+[a-zA-Z0-9])";
+        private const string dnsNameRegex = @"([a-zA-Z0-9]+(.[a-zA-Z0-9]+)*[a-zA-Z0-9])";
 
         private const string IPv4AddrRegex = "(" +
             @"([01]?\d\d|2[0-4]\d|25[0-5])\." +
@@ -86,32 +103,42 @@ namespace MonoTorrent.ClientService
 
             service = monoTorrentService;
             webui = filesWebUI;
+
+            listenWorker = new Thread(ListenLoop);
         }
 
         #region Service Control
         protected override void OnStart(string[] args)
         {
             stopFlag = false;
-            stopHandle.Reset();
+            LoadIndexDocument();
+
             listener.Start();
-            listener.BeginGetContext(HandleRequest, listener);
+            listenWorker.Start();
         }
 
         protected override void OnStop()
         {
             stopFlag = true;
-            listener.Abort();
-            stopHandle.WaitOne();
+            listener.Stop();
+            
+            // wait for request to finish
+            if (!listenWorker.Join(5000))
+            {
+                // taking too long
+                listener.Abort(); // drop all incoming request and shutdown
+                listenWorker.Join();
+            }
         }
 
         protected override void OnPause()
         {
-            base.OnPause();
+            Monitor.Enter(requestProcessLock);
         }
 
         protected override void OnContinue()
         {
-            base.OnContinue();
+            Monitor.Exit(requestProcessLock);
         }
 
         #region Debug methods
@@ -131,36 +158,89 @@ namespace MonoTorrent.ClientService
         #endregion
 
         #region Request Processing
+
         /// <summary>
-        /// Implements the listener "loop" and marshals requests as appropriate.
+        /// Thread which runs ListenLoop()
         /// </summary>
-        private void HandleRequest(IAsyncResult ar)
+        Thread listenWorker;
+
+        /// <summary>
+        /// Set to true to signal the listner loop to stop
+        /// </summary>
+        bool stopFlag = false;
+
+        /// <summary>
+        /// Used to pause and unpause the listener thread
+        /// </summary>
+        object requestProcessLock = new object();
+
+        /// <summary>
+        /// Check stopFlag, listen for request, marshal request, repeat.
+        /// </summary>
+        private void ListenLoop()
         {
-            HttpListener http = (HttpListener)ar.AsyncState;
-
-            try
+            while (!stopFlag)
             {
-                HttpListenerContext context = http.EndGetContext(ar);
-                Console.WriteLine("Got request for: " + context.Request.RawUrl);
+                HttpListenerContext context = null;
 
-                if (!context.Request.RawUrl.StartsWith(urlBase))
-                    ProcessInvalidRequest(context);
-                else if (context.Request.QueryString.Count == 0) // /gui/some/file.ext
-                    ProcessFile(context);
-                else // /gui/some/path?token=...&action=...&hash=...
-                    ProcessQueryRequest(context);
-                
-                context.Response.Close();
+                try
+                {
+                    context = listener.GetContext();
+
+                    lock (requestProcessLock)
+                    {
+                        Trace.WriteLine("Received request: " + context.Request.RawUrl);
+
+                        MarshalRequest(context);
+                    }
+                }
+                catch (ObjectDisposedException) { } // listener.Abort() was called
+                catch (Exception ex)
+                {
+                    Trace.WriteLine("Error: " + ex.Message);
+                }
+                finally
+                {
+                    if (context != null)
+                        context.Response.Close();
+                } 
             }
-            catch (Exception ex)
+        }
+
+        /// <summary>
+        /// Dispatches the request to the appropriate function based on the request URL
+        /// </summary>
+        private void MarshalRequest(HttpListenerContext context)
+        {
+            if (!context.Request.RawUrl.StartsWith(urlBase)) // is request for "/gui/..."
             {
-                Console.WriteLine("Error: " + ex.Message);
-            }
+                // maybe user forgot the trailing slash (i.e. "/gui" or "/gui?...")
+                if (context.Request.RawUrl.StartsWith(urlBaseNoSlashQuery)
+                 || context.Request.RawUrl.StartsWith(urlBaseNoSlash))
+                {
+                    string withMissingSlash;
+                    int queryStart = context.Request.RawUrl.IndexOf('?');
 
-            if (!stopFlag)
-                http.BeginGetContext(HandleRequest, http);
+                    if (queryStart > -1) // is there a query string?
+                        withMissingSlash = context.Request.RawUrl.Insert(queryStart, "/");
+                    else
+                        withMissingSlash = context.Request.RawUrl + "/";
+
+                    if (withMissingSlash.StartsWith(urlBase)) // point them to the right place
+                    {
+                        context.Response.StatusCode = (int)HttpStatusCode.MovedPermanently;
+                        context.Response.Redirect(withMissingSlash); 
+                    }
+                    else
+                        ProcessInvalidRequest(context); // nope, can't fix it
+                }
+                else
+                    ProcessInvalidRequest(context); // don't know what user is asking for
+            }
+            else if (context.Request.QueryString.Count > 0)
+                ProcessQueryRequest(context); /* /gui/some/path?token=...&action=...&hash=... */
             else
-                stopHandle.Set();
+                ProcessFile(context); /* /gui/some/file.ext */
         }
         
         /// <summary>
@@ -231,7 +311,13 @@ namespace MonoTorrent.ClientService
         /// </summary>
         private void ProcessTokenRequest(HttpListenerContext context)
         {
-            byte[] tokenData = Guid.NewGuid().ToByteArray();
+            const string tokenTemplate = "<html><div id='token' style='display:none;'>{0}</div></html>";
+            Guid token = Guid.NewGuid();
+
+            byte[] tokenData = Encoding.UTF8.GetBytes(String.Format(tokenTemplate, token));
+
+            context.Response.ContentType = "text/html";
+            context.Response.ContentEncoding = Encoding.UTF8;
 
             context.Response.OutputStream.Write(tokenData, 0, tokenData.Length);
         }
@@ -241,19 +327,14 @@ namespace MonoTorrent.ClientService
         /// </summary>
         private void ProcessIndexFileRequest(HttpListenerContext context, string filePath)
         {
-            using (FileStream data = File.OpenRead(filePath))
+            lock (indexDocument)
             {
-                XmlDocument doc = new XmlDocument();
-                doc.Load(data);
-                XmlNode node = doc.SelectSingleNode("//*[@id='token']");
-
-                if (node != null)
-                    node.InnerText = Guid.NewGuid().ToString();
+                indexTokenNode.InnerText = Guid.NewGuid().ToString();
 
                 context.Response.ContentType = "text/html";
                 using (XmlWriter writer = new XmlTextWriter(context.Response.OutputStream, Encoding.UTF8))
                 {
-                    doc.WriteTo(writer);
+                    indexDocument.WriteTo(writer);
                 }
             }
         }
@@ -265,8 +346,8 @@ namespace MonoTorrent.ClientService
         {
             HttpListenerRequest Request = context.Request;
             HttpListenerResponse Response = context.Response;
-            
-            if (!Request.RawUrl.StartsWith("/gui/?")) // request is for a file + query string
+
+            if (!Request.RawUrl.StartsWith(urlBaseWithQuery)) // request is for a file + query string
             {
                 ProcessFile(context);
                 return;
@@ -294,14 +375,14 @@ namespace MonoTorrent.ClientService
                         case "getsettings":
                             string settingsFile = Path.Combine(webui.FullName, "StaticSettings.txt");
                                                         
-                            WriteSettings(jsonWriter, settingsFile);
+                            PrintSettings(jsonWriter, settingsFile);
                             break;
                         case "setsetting":
                             //string setting = Request.QueryString["s"];
                             //string value = Request.QueryString["v"];
                             break;
                         case "getprops":
-                            WriteProperties(jsonWriter, hash);
+                            PrintProperties(jsonWriter, hash);
                             break;
                         case "setprops":
                             string property = Request.QueryString["s"];
@@ -311,7 +392,7 @@ namespace MonoTorrent.ClientService
                                 SetLabel(hash, value);
                             break;
                         case "getfiles":
-                            WriteFiles(jsonWriter, hash);
+                            PrintFiles(jsonWriter, hash);
                             break;
                         case "setprio":
                             string fileIndexes = Request.QueryString["f"];
@@ -320,32 +401,32 @@ namespace MonoTorrent.ClientService
                             SetFilePriority(hash, fileIndexes, priority);
                             break;
                         case "start":
-                            Start(hash);
+                            StartTorrents(hash);
                             break;
                         case "forcestart":
-                            Start(hash);
+                            StartTorrents(hash);
                             break;
                         case "stop":
-                            Stop(hash);
+                            StopTorrents(hash);
                             break;
                         case "pause":
-                            Pause(hash);
+                            PauseTorrents(hash);
                             break;
                         case "unpause":
-                            Start(hash);
+                            StartTorrents(hash);
                             break;
                         case "remove":
-                            Remove(jsonWriter, hash, false);
+                            RemoveTorrents(jsonWriter, hash, false);
                             break;
                         case "removedata":
-                            Remove(jsonWriter, hash, true);
+                            RemoveTorrents(jsonWriter, hash, true);
                             break;
                         case "recheck":
                             break;
                         case "add-file":
                             Response.ContentType = "text/plain";
                             jsonWriter.WritePropertyName("error");
-                            jsonWriter.WriteValue("Uploading files not currently supported.");
+                            jsonWriter.WriteValue("Uploading torrent files currently not supported.");
                             break;
                         case "add-url":
                             string url = Request.QueryString["s"];
@@ -366,10 +447,11 @@ namespace MonoTorrent.ClientService
                     }
 
                     if (list)
-                        WriteTorrentList(jsonWriter);
+                        PrintTorrentList(jsonWriter);
                 }
                 catch (Exception e)
                 {
+                    Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                     jsonWriter.WritePropertyName("error");
                     jsonWriter.WriteValue("Server Error: " + e.Message);
                 }
@@ -380,8 +462,13 @@ namespace MonoTorrent.ClientService
         #endregion
 
         #region Adaptor methods
-        private void WriteSettings(JsonWriter writer, string settingsFile)
+        /// <summary>
+        /// Prints the array of settings.
+        /// </summary>
+        private void PrintSettings(JsonWriter writer, string settingsFile)
         {
+            // TODO: Reads from a static file, make settings dynamic.
+
             writer.WritePropertyName("settings");
             writer.WriteStartArray();
 
@@ -410,79 +497,102 @@ namespace MonoTorrent.ClientService
             writer.WriteEndArray();
         }
 
-        private void WriteProperties(JsonWriter writer, string hash)
+        /// <summary>
+        /// Outputs the corresponding torrent's properties.
+        /// </summary>
+        private void PrintProperties(JsonWriter writer, string hash)
         {
+            TorrentManager details = service.GetTorrentManager(hash);
+
             writer.WritePropertyName("props");
             writer.WriteStartArray();
-            TorrentManager details = service.GetTorrentDetails(hash);
 
-            writer.WriteStartObject();
+            if (details != null)
+            {
+                writer.WriteStartObject();
 
-            writer.WritePropertyName("hash");           //HASH (string)
-            writer.WriteValue(hash);
-            writer.WritePropertyName("trackers");       //TRACKERS (string)
-            writer.WriteValue("");
-            writer.WritePropertyName("ulrate");         //UPLOAD LIMIT (integer in bytes per second)
-            writer.WriteValue(details.Settings.MaxUploadSpeed);
-            writer.WritePropertyName("dlrate");         //DOWNLOAD LIMIT (integer in bytes per second)
-            writer.WriteValue(details.Settings.MaxDownloadSpeed);
-            writer.WritePropertyName("superseed");      //INITIAL SEEDING (integer)
-            writer.WriteValue((int)Option.Disabled);
-            writer.WritePropertyName("dht");            //USE DHT (integer)
-            writer.WriteValue((int)Option.Disabled);
-            writer.WritePropertyName("pex");            //USE PEX (integer)
-            writer.WriteValue((int)Option.Disabled);
-            writer.WritePropertyName("seed_override");  //OVERRIDE QUEUEING (integer)
-            writer.WriteValue((int)Option.Disabled);
-            writer.WritePropertyName("seed_ratio");     //SEED RATIO (integer in 1/10 of a percent)
-            writer.WriteValue(1000);
-            writer.WritePropertyName("seed_time");      //SEEDING TIME (integer in seconds)
-            writer.WriteValue(0);
-            writer.WritePropertyName("ulslots");        //UPLOAD SLOTS (integer)
-            writer.WriteValue(details.Settings.UploadSlots);
+                writer.WritePropertyName("hash");           //HASH (string)
+                writer.WriteValue(hash);
+                writer.WritePropertyName("trackers");       //TRACKERS (string)
+                writer.WriteValue("");
+                writer.WritePropertyName("ulrate");         //UPLOAD LIMIT (integer in bytes per second)
+                writer.WriteValue(details.Settings.MaxUploadSpeed);
+                writer.WritePropertyName("dlrate");         //DOWNLOAD LIMIT (integer in bytes per second)
+                writer.WriteValue(details.Settings.MaxDownloadSpeed);
+                writer.WritePropertyName("superseed");      //INITIAL SEEDING (integer)
+                writer.WriteValue((int)Option.Disabled);
+                writer.WritePropertyName("dht");            //USE DHT (integer)
+                writer.WriteValue((int)Option.Disabled);
+                writer.WritePropertyName("pex");            //USE PEX (integer)
+                writer.WriteValue((int)Option.Disabled);
+                writer.WritePropertyName("seed_override");  //OVERRIDE QUEUEING (integer)
+                writer.WriteValue((int)Option.Disabled);
+                writer.WritePropertyName("seed_ratio");     //SEED RATIO (integer in 1/10 of a percent)
+                writer.WriteValue(1000);
+                writer.WritePropertyName("seed_time");      //SEEDING TIME (integer in seconds)
+                writer.WriteValue(0);
+                writer.WritePropertyName("ulslots");        //UPLOAD SLOTS (integer)
+                writer.WriteValue(details.Settings.UploadSlots);
 
-            writer.WriteEndObject();
+                writer.WriteEndObject();
+            }
+            else
+                writer.WriteNull();
 
             writer.WriteEndArray();
         }
 
-        private void WriteFiles(JsonWriter writer, string hash)
+        /// <summary>
+        /// Outputs the corresponding torrent's files.
+        /// </summary>
+        private void PrintFiles(JsonWriter writer, string hash)
         {
+            TorrentManager details = service.GetTorrentManager(hash);
+
             writer.WritePropertyName("files");
             writer.WriteStartArray();
 
             writer.WriteValue(hash);
 
-            writer.WriteStartArray();
-            TorrentManager details = service.GetTorrentDetails(hash);
-            
-            foreach (TorrentFile file in details.FileManager.Files)
+            if (details != null)
             {
                 writer.WriteStartArray();
+                foreach (TorrentFile file in details.FileManager.Files)
+                {
+                    writer.WriteStartArray();
 
-                writer.WriteValue(file.Path);   //FILE NAME (string)
-                writer.WriteValue(file.Length); //FILE SIZE (integer in bytes)
-                writer.WriteValue(0);           //DOWNLOADED (integer in bytes)
-                writer.WriteValue((int)PriorityAdapter(file.Priority)); //PRIORITY* (integer)
+                    writer.WriteValue(file.Path);   //FILE NAME (string)
+                    writer.WriteValue(file.Length); //FILE SIZE (integer in bytes)
+                    writer.WriteValue(0);           //DOWNLOADED (integer in bytes)
+                    writer.WriteValue((int)PriorityAdapter(file.Priority)); //PRIORITY* (integer)
 
+                    writer.WriteEndArray();
+                }
                 writer.WriteEndArray();
             }
-            writer.WriteEndArray();
+            else
+                writer.WriteNull();
 
             writer.WriteEndArray();
         }
 
-        private void WriteLabels(JsonWriter writer)
+        /// <summary>
+        /// Outputs the list of all labels.
+        /// </summary>
+        private void PrintLabels(JsonWriter writer)
         {
+            // TODO: Implement labels
+            Dictionary<string, int> labels = new Dictionary<string, int>();
+
             writer.WritePropertyName("label");
             writer.WriteStartArray();
 
-            foreach (object setting in new object[] { })
+            foreach (KeyValuePair<string, int> label in labels)
             {
                 writer.WriteStartArray();
 
-                writer.WriteValue("Label Name"); // Label
-                writer.WriteValue(-1);           // Torrent count
+                writer.WriteValue(label.Key);   // Label
+                writer.WriteValue(label.Value); // Torrent count
 
                 writer.WriteEndArray();
             }
@@ -490,40 +600,53 @@ namespace MonoTorrent.ClientService
             writer.WriteEndArray();
         }
 
-        private void WriteTorrentList(JsonWriter writer)
+        /// <summary>
+        /// Outputs the list of torrents and labels.
+        /// </summary>
+        /// <param name="writer"></param>
+        private void PrintTorrentList(JsonWriter writer)
         {
-            WriteLabels(writer);
+            PrintLabels(writer);
 
             writer.WritePropertyName("torrents");
             writer.WriteStartArray();
-
-            IEnumerator<KeyValuePair<string, TorrentManager>> torrentEnum = service.GetTorrentEnumerator();
-            while (torrentEnum.MoveNext())
+            
+            foreach(KeyValuePair<string, TorrentManager> pair in service.TorrentManagers)
             {
-                string hash = torrentEnum.Current.Key;
-                TorrentManager torrent = torrentEnum.Current.Value;
+                string hash = pair.Key;
+                TorrentManager torrent = pair.Value;
 
                 writer.WriteStartArray();
 
+                long remBytes = (long)Math.Round(torrent.Torrent.Size * (1.0 - torrent.Progress));
+                long remSeconds = (long)Math.Round(
+                    (double)remBytes / (double)torrent.Monitor.DownloadSpeed
+                    );
+                int ratio = (int)Math.Round(
+                    (double)torrent.Monitor.DataBytesDownloaded * 10 / (double)torrent.Monitor.DataBytesUploaded
+                    );
+                int totalPeers = torrent.Peers.Leechs + torrent.Peers.Seeds;
+                int progress = (int)Math.Round(torrent.Progress * 10);
+
                 writer.WriteValue(hash);                                //HASH (string),
-                writer.WriteValue((int)StateAdapter(torrent.State));    //STATUS* (integer),
+                writer.WriteValue((int)StateAdapter(torrent.State));    //STATUS (integer),
                 writer.WriteValue(torrent.Torrent.Name);                //NAME (string),
                 writer.WriteValue(torrent.Torrent.Size);                //SIZE (integer in bytes),
-                writer.WriteValue(torrent.Progress * 100);              //PERCENT PROGRESS (integer in 1/10 of a percent),
+                writer.WriteValue(progress);                            //PERCENT PROGRESS (integer in 1/10 of a percent),
                 writer.WriteValue(torrent.Monitor.DataBytesDownloaded); //DOWNLOADED (integer in bytes),
                 writer.WriteValue(torrent.Monitor.DataBytesUploaded);   //UPLOADED (integer in bytes),
-                writer.WriteValue(0);                                   //RATIO (integer in 1/10 of a percent),
+                writer.WriteValue(ratio);                               //RATIO (integer in 1/10 of a percent),
                 writer.WriteValue(torrent.Monitor.UploadSpeed);         //UPLOAD SPEED (integer in bytes per second),
                 writer.WriteValue(torrent.Monitor.DownloadSpeed);       //DOWNLOAD SPEED (integer in bytes per second),
-                writer.WriteValue(0);                                   //ETA (integer in seconds),
+                writer.WriteValue(remSeconds);                          //ETA (integer in seconds),
                 writer.WriteValue("");                                  //LABEL (string),
-                writer.WriteValue(torrent.Peers.Leechs + torrent.Peers.Seeds);//PEERS CONNECTED (integer),
-                writer.WriteValue(torrent.Peers.Leechs + torrent.Peers.Seeds);//PEERS IN SWARM (integer),
+                writer.WriteValue(totalPeers);                          //PEERS CONNECTED (integer),
+                writer.WriteValue(totalPeers);                          //PEERS IN SWARM (integer),
                 writer.WriteValue(torrent.Peers.Seeds);                 //SEEDS CONNECTED (integer),
-                writer.WriteValue(torrent.Peers.Leechs + torrent.Peers.Seeds);//SEEDS IN SWARM (integer),
+                writer.WriteValue(totalPeers);                          //SEEDS IN SWARM (integer),
                 writer.WriteValue(1);                                   //AVAILABILITY (integer in 1/65535ths),
                 writer.WriteValue(torrent.Complete ? 1 : -1);           //TORRENT QUEUE ORDER (integer),
-                writer.WriteValue((long)Math.Round(torrent.Torrent.Size * (1.0 - torrent.Progress)));//REMAINING (integer in bytes)
+                writer.WriteValue(remBytes);                            //REMAINING (integer in bytes)
 
                 writer.WriteEndArray();
             }
@@ -543,6 +666,10 @@ namespace MonoTorrent.ClientService
             //writer.WriteValue(0);
         }
 
+        /// <summary>
+        /// Parses the torrent metadata in the stream and registers it with the engine.
+        /// </summary>
+        /// <param name="fileData"></param>
         private void AddFile(Stream fileData)
         {
             service.AddTorrent(fileData, null, null,
@@ -550,6 +677,9 @@ namespace MonoTorrent.ClientService
                 Settings.DefaultMaxDownloadSpeed, Settings.DefaultMaxUploadSpeed, false);
         }
 
+        /// <summary>
+        /// Sets priority of files (specified by indexes) in the torrent (specified by hash).
+        /// </summary>
         private void SetFilePriority(string hash, string fileIndexes, int webPriority)
         {
             Priority priority = PriorityAdapter((WebPriority)webPriority);
@@ -567,31 +697,49 @@ namespace MonoTorrent.ClientService
                 priority);
         }
 
-        private void Pause(string hashes)
+        /// <summary>
+        /// Starts torrents specified in the comma separated list of hashes.
+        /// </summary>
+        private void StartTorrents(string hashes)
         {
-            foreach (string hash in hashes.Split(new char[] { ',' }))
+            string[] hashList = hashes.Split(new char[] { ',' });
+
+            foreach (string hash in hashList)
             {
-                service.Pause(hash);
+                service.StartTorrent(hash);
             }
         }
 
-        private void Stop(string hashes)
+        /// <summary>
+        /// Pauses torrents specified in the comma separated list of hashes.
+        /// </summary>
+        private void PauseTorrents(string hashes)
         {
-            foreach (string hash in hashes.Split(new char[] { ',' }))
+            string [] hashList = hashes.Split(new char[] { ',' });
+
+            foreach (string hash in hashList)
             {
-                service.Stop(hash);
+                service.PauseTorrent(hash);
             }
         }
 
-        private void Start(string hashes)
+        /// <summary>
+        /// Stops torrents specified in the comma separated list of hashes.
+        /// </summary>
+        private void StopTorrents(string hashes)
         {
-            foreach (string hash in hashes.Split(new char[] { ',' }))
+            string[] hashList = hashes.Split(new char[] { ',' });
+
+            foreach (string hash in hashList)
             {
-                service.Start(hash);
+                service.StopTorrent(hash);
             }
         }
 
-        private void Remove(JsonWriter writer, string hashes, bool removeData)
+        /// <summary>
+        /// Removes torrents specified in the comma separated list of hashes.
+        /// </summary>
+        private void RemoveTorrents(JsonWriter writer, string hashes, bool removeData)
         {
             string[] splitHashes = hashes.Split(new char[] { ',' });
 
@@ -609,12 +757,21 @@ namespace MonoTorrent.ClientService
             //yield return new JSONPair(new JSONStringValue("torrentm"), new JSONArrayCollection(torrentmList));
         }
 
+        /// <summary>
+        /// Sets the label for the specified torrent.
+        /// </summary>
+        /// <param name="hash"></param>
+        /// <param name="label"></param>
         public void SetLabel(string hash, string label)
         {
+            // TODO: Implement this.
         }
         #endregion
 
         #region Helpers
+        /// <summary>
+        /// Converts MonoTorrent's torrent state into WebUI state.
+        /// </summary>
         private State StateAdapter(TorrentState state)
         {
             if (state == TorrentState.Paused)
@@ -635,6 +792,9 @@ namespace MonoTorrent.ClientService
             }
         }
 
+        /// <summary>
+        /// Converts priority from WebUI to MonoTorrent
+        /// </summary>
         private Priority PriorityAdapter(WebPriority priority)
         {
             if (priority == WebPriority.Skip)
@@ -655,6 +815,9 @@ namespace MonoTorrent.ClientService
             }
         }
 
+        /// <summary>
+        /// Converts priority from MonoTorrent to WebUI
+        /// </summary>
         private WebPriority PriorityAdapter(Priority priority)
         {
             if (priority == Priority.DoNotDownload)
@@ -672,6 +835,24 @@ namespace MonoTorrent.ClientService
             else
             {
                 return WebPriority.Normal;
+            }
+        }
+
+        /// <summary>
+        /// Helper method to load the index.html into an XmlDocument. Done OnStart() because it's rather slow.
+        /// </summary>
+        private void LoadIndexDocument()
+        {
+            indexDocument = new XmlDocument();
+
+            lock (indexDocument)
+            {
+                string indexDocumentPath = Path.Combine(webui.FullName, indexFile);
+                using (FileStream data = File.OpenRead(indexDocumentPath))
+                {
+                    indexDocument.Load(data);
+                    indexTokenNode = indexDocument.SelectSingleNode("//*[@id='token']");
+                }
             }
         }
 
