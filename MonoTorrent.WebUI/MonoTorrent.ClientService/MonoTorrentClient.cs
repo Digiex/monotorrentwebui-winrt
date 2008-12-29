@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using MonoTorrent.Common;
 using MonoTorrent.Client;
 using MonoTorrent.Client.Encryption;
+using MonoTorrent.ClientService.Configuration;
 
 namespace MonoTorrent.ClientService
 {
@@ -27,6 +28,8 @@ namespace MonoTorrent.ClientService
         /// </summary>
         private Dictionary<string, TorrentManager> torrents;
 
+        private MonoTorrentClientSection config;
+
         /// <summary>
         /// Creates a new instance of MonoTorrentClient.
         /// </summary>
@@ -36,8 +39,11 @@ namespace MonoTorrent.ClientService
 
             torrents = new Dictionary<string, TorrentManager>();
 
-            EngineSettings settings = LoadClientEngineSettings();
-            client = new ClientEngine(settings);
+            // Settings are applied later when the service is started.
+            EngineSettings defaultSettings = new EngineSettings();
+            client = new ClientEngine(defaultSettings);
+            client.Listener.Stop();
+            client.DhtEngine.Stop();
         }
 
         #region Settings
@@ -46,83 +52,63 @@ namespace MonoTorrent.ClientService
         /// 
         /// </summary>
         /// <returns>EngineSettings instance.</returns>
-        private EngineSettings LoadClientEngineSettings()
+        private EngineSettings GetClientEngineSettings()
         {
-            string DataDirectory;
-            IPEndPoint ListenEndpoint;
-            int GlobalMaxConnections;
-            int GlobalMaxHalfOpenConnections;
-            int GlobalMaxDownloadSpeed;
-            int GlobalMaxUploadSpeed;
-            EncryptionTypes EncryptionFlags;
-
-            DataDirectory = ConfigurationManager.AppSettings["SaveDirectory"];
-
-            IPAddress listenAddress = IPAddress.Parse(ConfigurationManager.AppSettings["ListenAddress"]);
-            int listenPort = int.Parse(ConfigurationManager.AppSettings["ListenPort"]);
-            ListenEndpoint = new IPEndPoint(listenAddress, listenPort);
-
-            GlobalMaxConnections = int.Parse(ConfigurationManager.AppSettings["GlobalMaxConnections"]);
-            GlobalMaxHalfOpenConnections = int.Parse(ConfigurationManager.AppSettings["GlobalMaxHalfOpenConnections"]);
-            GlobalMaxDownloadSpeed = int.Parse(ConfigurationManager.AppSettings["GlobalMaxDownloadSpeed"]);
-            GlobalMaxUploadSpeed = int.Parse(ConfigurationManager.AppSettings["GlobalMaxUploadSpeed"]);
-            EncryptionFlags = (EncryptionTypes)int.Parse(ConfigurationManager.AppSettings["EncryptionFlags"]);
-
             EngineSettings settings = new EngineSettings(
-                DataDirectory,
-                ListenEndpoint.Port,
-                GlobalMaxConnections,
-                GlobalMaxHalfOpenConnections,
-                GlobalMaxDownloadSpeed,
-                GlobalMaxUploadSpeed,
-                EncryptionFlags);
+                config.SavePath.ToString(),
+                config.ListenPort,
+                config.MaxGlobalConnections,
+                config.MaxHalfOpenConnections,
+                config.MaxDownloadRate,
+                config.MaxUploadRate,
+                config.EncryptionFlags);
 
             return settings;
         }
 
         /// <summary>
-        /// Reads config file and applies the settings to ClientEngine.
+        /// Loads the WebUI configuration section.
         /// </summary>
-        private void ReloadClientEngineSettings()
+        private void LoadConfiguration(string[] args)
         {
-            string DataDirectory;
-            IPEndPoint ListenEndpoint;
-            int GlobalMaxConnections;
-            int GlobalMaxHalfOpenConnections;
-            int GlobalMaxDownloadSpeed;
-            int GlobalMaxUploadSpeed;
-            EncryptionTypes EncryptionFlags;
+            if (args.Length > 0)
+            {
+                System.Configuration.Configuration configFile =
+                    ConfigurationManager.OpenExeConfiguration(args[0]);
 
-            DataDirectory = ConfigurationManager.AppSettings["SaveDirectory"];
+                config = (MonoTorrentClientSection)configFile.GetSection("MonoTorrentClient");
+            }
+            else
+                config = (MonoTorrentClientSection)ConfigurationManager.GetSection("MonoTorrentClient");
+        }
 
-            IPAddress listenAddress = IPAddress.Parse(ConfigurationManager.AppSettings["ListenAddress"]);
-            int listenPort = int.Parse(ConfigurationManager.AppSettings["ListenPort"]);
-            ListenEndpoint = new IPEndPoint(listenAddress, listenPort);
+        /// <summary>
+        /// Applies the currently loaded configuration section.
+        /// </summary>
+        private void ApplyConfiguration()
+        {
+            client.Settings.SavePath = config.SavePath.ToString();
 
-            GlobalMaxConnections = int.Parse(ConfigurationManager.AppSettings["GlobalMaxConnections"]);
-            GlobalMaxHalfOpenConnections = int.Parse(ConfigurationManager.AppSettings["GlobalMaxHalfOpenConnections"]);
-            GlobalMaxDownloadSpeed = int.Parse(ConfigurationManager.AppSettings["GlobalMaxDownloadSpeed"]);
-            GlobalMaxUploadSpeed = int.Parse(ConfigurationManager.AppSettings["GlobalMaxUploadSpeed"]);
-            EncryptionFlags = (EncryptionTypes)int.Parse(ConfigurationManager.AppSettings["EncryptionFlags"]);
+            if (!client.Listener.Endpoint.Equals(config.ListenEndPoint))
+                client.ChangeListenEndpoint(config.ListenEndPoint);
 
-            client.Settings.SavePath = DataDirectory;
-
-            if (!client.Listener.Endpoint.Equals(ListenEndpoint))
-                client.ChangeListenEndpoint(ListenEndpoint);
-
-            client.Settings.GlobalMaxConnections = GlobalMaxConnections;
-            client.Settings.GlobalMaxHalfOpenConnections = GlobalMaxHalfOpenConnections;
-            client.Settings.GlobalMaxDownloadSpeed = GlobalMaxDownloadSpeed;
-            client.Settings.GlobalMaxUploadSpeed = GlobalMaxUploadSpeed;
-            client.Settings.AllowedEncryption = EncryptionFlags;
+            client.Settings.GlobalMaxConnections = config.MaxGlobalConnections;
+            client.Settings.GlobalMaxHalfOpenConnections = config.MaxHalfOpenConnections;
+            client.Settings.GlobalMaxDownloadSpeed = config.MaxDownloadRate;
+            client.Settings.GlobalMaxUploadSpeed = config.MaxUploadRate;
+            client.Settings.AllowedEncryption = config.EncryptionFlags;
         }
         #endregion
 
         #region Service Control Interface
         protected override void OnStart(string[] args)
         {
-            ReloadClientEngineSettings();
+            LoadConfiguration(args);
+            ApplyConfiguration();
             // TODO: Load torrents
+
+            client.Listener.Start();
+            client.DhtEngine.Start();
         }
 
         /// <summary>
@@ -155,6 +141,9 @@ namespace MonoTorrent.ClientService
         protected override void OnStop()
         {
             StopAllTorrents();
+
+            client.Listener.Stop();
+            client.DhtEngine.Stop();
         }
 
         #region Debug methods

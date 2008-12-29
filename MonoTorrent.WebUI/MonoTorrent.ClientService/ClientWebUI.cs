@@ -12,6 +12,8 @@ using MonoTorrent.Common;
 using MonoTorrent.Client;
 using Newtonsoft.Json;
 using System.Diagnostics;
+using MonoTorrent.Client.Tracker;
+using MonoTorrent.ClientService.Configuration;
 
 namespace MonoTorrent.ClientService
 {
@@ -28,44 +30,24 @@ namespace MonoTorrent.ClientService
         private const string tokenFile = "token.html";
 
         /// <summary>
-        /// Mini webserver
+        /// Configuration for WebUI.
         /// </summary>
-        HttpListener listener;
+        WebUISection config;
+
+        /// <summary>
+        /// This is the webserver.
+        /// </summary>
+        private HttpListener listener;
         
         /// <summary>
         /// Service which is running the MonoTorrent engine
         /// </summary>
-        MonoTorrentClient service;
-
-        /// <summary>
-        /// WebUI files found here
-        /// </summary>
-        DirectoryInfo webui;
+        private MonoTorrentClient service;
 
         // Cache the index document as an XmlDocument because 
         // XmlDocument.Load() takes too long to process for each request
         private XmlDocument indexDocument;
         private XmlNode indexTokenNode;
-
-        #region Validation Regexes
-        private const string dnsNameRegex = @"([a-zA-Z0-9]+(.[a-zA-Z0-9]+)*[a-zA-Z0-9])";
-
-        private const string IPv4AddrRegex = "(" +
-            @"([01]?\d\d|2[0-4]\d|25[0-5])\." +
-            @"([01]?\d\d|2[0-4]\d|25[0-5])\." +
-            @"([01]?\d\d|2[0-4]\d|25[0-5])\." +
-            @"([01]?\d\d|2[0-4]\d|25[0-5])" +
-            ")";
-
-        // TODO: Fix IPv6 matching regex
-        private const string IPv6AddrRegex = @"(" +
-            @"[0-9a-zA-Z:]+" +
-            ")";
-
-        private static readonly Regex listenPrefixValidator = new Regex(
-            @"^https?://((" + dnsNameRegex + "|" + IPv4AddrRegex + "|" + IPv6AddrRegex + ")|[+]|[*])(:[0-9]{1,5})?/gui/$",
-            RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.CultureInvariant); 
-        #endregion
 
         /// <summary>
         /// 
@@ -73,72 +55,95 @@ namespace MonoTorrent.ClientService
         /// <param name="filesWebUI">Directory containing the WebUI files. There must be an "index.html" present.</param>
         /// <param name="listenPrefix">Prefix to register with HttpListener. It must be of the form "http://hostname:port/gui/", hostname may be a wildcard (* or +), port is optional.</param>
         /// <param name="monoTorrentService">An instance of the MonoTorrent client service.</param>
-        public ClientWebUI(DirectoryInfo filesWebUI, string listenPrefix, MonoTorrentClient monoTorrentService)
+        public ClientWebUI(MonoTorrentClient monoTorrentService)
         {
-            #region Validate Arguments
-            if (filesWebUI == null)
-                throw new ArgumentNullException("filesWebUI");
-
-            if (!filesWebUI.Exists)
-                throw new ArgumentException("WebUI directory does not exist.", "filesWebUI");
-            else if (filesWebUI.GetFiles("index.html").Length == 0)
-                throw new ArgumentException("WebUI directory does not contain an index file.", "filesWebUI");
-
-            if (listenPrefix == null)
-                throw new ArgumentNullException("listenPrefix");
-
-            if (!listenPrefixValidator.IsMatch(listenPrefix))
-                throw new ArgumentException("Invalid listener prefix.", "listenPrefix");
-
             if (monoTorrentService == null)
-                throw new ArgumentNullException("monoTorrentService"); 
-            #endregion
-            
+                throw new ArgumentNullException("monoTorrentService");
+
             InitializeComponent();
 
             listener = new HttpListener();
-            listener.AuthenticationSchemes = AuthenticationSchemes.Anonymous;
-
-            listener.Prefixes.Add(listenPrefix.ToString());
-
             service = monoTorrentService;
-            webui = filesWebUI;
-
             listenWorker = new Thread(ListenLoop);
         }
 
+        /// <summary>
+        /// Loads the WebUI configuration section.
+        /// </summary>
+        private void LoadConfiguration(string[] args)
+        {
+            if (args.Length > 0)
+            {
+                System.Configuration.Configuration configFile =
+                    ConfigurationManager.OpenExeConfiguration(args[0]);
+
+                config = (WebUISection)configFile.GetSection("WebUI");
+            }
+            else
+                config = (WebUISection)ConfigurationManager.GetSection("WebUI");
+        }
+
+        /// <summary>
+        /// Applies the currently loaded configuration section.
+        /// </summary>
+        private void ApplyConfiguration()
+        {
+            listener.AuthenticationSchemes = AuthenticationSchemes.Anonymous;
+
+            listener.Prefixes.Clear();
+            listener.Prefixes.Add(config.HttpListenerPrefix);
+        }
+
         #region Service Control
+
+        private object serviceControlLock = new object();
+
         protected override void OnStart(string[] args)
         {
-            stopFlag = false;
-            LoadIndexDocument();
+            lock (serviceControlLock)
+            {
+                LoadConfiguration(args);
+                ApplyConfiguration();
 
-            listener.Start();
-            listenWorker.Start();
+                stopFlag = false;
+                LoadIndexDocument();
+
+                listener.Start();
+                listenWorker.Start();
+            }
         }
 
         protected override void OnStop()
         {
-            stopFlag = true;
-            listener.Stop();
-            
-            // wait for request to finish
-            if (!listenWorker.Join(5000))
+            lock (serviceControlLock)
             {
-                // taking too long
-                listener.Abort(); // drop all incoming request and shutdown
-                listenWorker.Join();
+                stopFlag = true;
+                listener.Stop();
+
+                // wait for request to finish
+                if (!listenWorker.Join(5000))
+                {
+                    // taking too long
+                    listener.Abort(); // drop all incoming request and shutdown
+                    listenWorker.Join();
+                }
             }
         }
 
         protected override void OnPause()
         {
-            Monitor.Enter(requestProcessLock);
+            lock (serviceControlLock)
+            {
+                Monitor.Enter(requestProcessLock);
+            }
         }
 
         protected override void OnContinue()
         {
-            Monitor.Exit(requestProcessLock);
+            lock (serviceControlLock)
+            {
+                Monitor.Exit(requestProcessLock);
+            }
         }
 
         #region Debug methods
@@ -282,7 +287,7 @@ namespace MonoTorrent.ClientService
             if (String.IsNullOrEmpty(filePath))
                 filePath = indexFile;
 
-            filePath = Path.Combine(webui.FullName, filePath);
+            filePath = Path.Combine(config.DirWebUI.FullName, filePath);
             string fileName = Path.GetFileName(filePath);
 
             if (String.CompareOrdinal(fileName, indexFile) == 0)
@@ -354,8 +359,8 @@ namespace MonoTorrent.ClientService
             }
 
             Response.ContentType = "application/json";
-            Response.ContentEncoding = Encoding.UTF8;
-
+            Response.ContentEncoding = config.ResponseEncoding;
+            
             using (JsonWriter jsonWriter = new JsonWriter(new StreamWriter(Response.OutputStream, Response.ContentEncoding)))
             {
                 string token = Request.QueryString["token"];
@@ -363,6 +368,8 @@ namespace MonoTorrent.ClientService
                 string hash = Request.QueryString["hash"];
                 bool list = String.CompareOrdinal(Request.QueryString["list"], "1") == 0;
 
+                List<string> errorMessages = new List<string>();
+                
                 jsonWriter.WriteStartObject();
 
                 jsonWriter.WritePropertyName("build");
@@ -373,7 +380,7 @@ namespace MonoTorrent.ClientService
                     switch (action)
                     {
                         case "getsettings":
-                            string settingsFile = Path.Combine(webui.FullName, "StaticSettings.txt");
+                            string settingsFile = Path.Combine(config.DirWebUI.FullName, "StaticSettings.txt");
                                                         
                             PrintSettings(jsonWriter, settingsFile);
                             break;
@@ -441,8 +448,8 @@ namespace MonoTorrent.ClientService
                             break; // do nothing
 
                         default:
-                            jsonWriter.WritePropertyName("error");
-                            jsonWriter.WriteValue("Unknown request. URL: " + Request.RawUrl);
+                            Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                            errorMessages.Add("Unknown request. URL: " + Request.RawUrl);
                             break;
                     }
 
@@ -451,9 +458,21 @@ namespace MonoTorrent.ClientService
                 }
                 catch (Exception e)
                 {
+                    base.EventLog.WriteEntry("Parser error", 
+                        EventLogEntryType.Error, 
+                        0, 0, 
+                        Encoding.Default.GetBytes(e.ToString())
+                        );
+
                     Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                    errorMessages.Add("Server Error: " + e.Message);
+                }
+
+                if (errorMessages.Count > 0)
+                {
+                    string errorMessage = String.Join("\n", errorMessages.ToArray());
                     jsonWriter.WritePropertyName("error");
-                    jsonWriter.WriteValue("Server Error: " + e.Message);
+                    jsonWriter.WriteValue(errorMessage);
                 }
 
                 jsonWriter.WriteEndObject();
@@ -511,35 +530,55 @@ namespace MonoTorrent.ClientService
             {
                 writer.WriteStartObject();
 
+                int dhtStatus = (int)(details.CanUseDht ? BooleanAdapter(details.Settings.UseDht) : WebOption.NotAllowed);
+
                 writer.WritePropertyName("hash");           //HASH (string)
                 writer.WriteValue(hash);
                 writer.WritePropertyName("trackers");       //TRACKERS (string)
-                writer.WriteValue("");
+                writer.WriteValue(GetTrackerString(details));
                 writer.WritePropertyName("ulrate");         //UPLOAD LIMIT (integer in bytes per second)
                 writer.WriteValue(details.Settings.MaxUploadSpeed);
                 writer.WritePropertyName("dlrate");         //DOWNLOAD LIMIT (integer in bytes per second)
                 writer.WriteValue(details.Settings.MaxDownloadSpeed);
                 writer.WritePropertyName("superseed");      //INITIAL SEEDING (integer)
-                writer.WriteValue((int)Option.Disabled);
+                writer.WriteValue((int)BooleanAdapter(details.Settings.InitialSeedingEnabled));
                 writer.WritePropertyName("dht");            //USE DHT (integer)
-                writer.WriteValue((int)Option.Disabled);
+                writer.WriteValue(dhtStatus);
                 writer.WritePropertyName("pex");            //USE PEX (integer)
-                writer.WriteValue((int)Option.Disabled);
+                writer.WriteValue((int)WebOption.Disabled);
                 writer.WritePropertyName("seed_override");  //OVERRIDE QUEUEING (integer)
-                writer.WriteValue((int)Option.Disabled);
+                writer.WriteValue((int)WebOption.Disabled);
                 writer.WritePropertyName("seed_ratio");     //SEED RATIO (integer in 1/10 of a percent)
-                writer.WriteValue(1000);
+                writer.WriteValue(0);
                 writer.WritePropertyName("seed_time");      //SEEDING TIME (integer in seconds)
                 writer.WriteValue(0);
                 writer.WritePropertyName("ulslots");        //UPLOAD SLOTS (integer)
                 writer.WriteValue(details.Settings.UploadSlots);
-
+                
                 writer.WriteEndObject();
             }
             else
                 writer.WriteNull();
 
             writer.WriteEndArray();
+        }
+
+        private string GetTrackerString(TorrentManager torrent)
+        {
+            const string newLine = "\r\n";
+            StringBuilder value = new StringBuilder();
+            foreach (TrackerTier tier in torrent.TrackerManager.TrackerTiers)
+            {
+                foreach (MonoTorrent.Client.Tracker.Tracker tracker in tier)
+                {
+                    value.Append(tracker.Uri);
+                    value.Append(newLine);
+                }
+
+                value.Append(newLine); // tier separator
+            }
+
+            return value.ToString();
         }
 
         /// <summary>
@@ -772,23 +811,23 @@ namespace MonoTorrent.ClientService
         /// <summary>
         /// Converts MonoTorrent's torrent state into WebUI state.
         /// </summary>
-        private State StateAdapter(TorrentState state)
+        private WebState StateAdapter(TorrentState state)
         {
             if (state == TorrentState.Paused)
             {
-                return State.Paused;
+                return WebState.Paused;
             }
             else if ((state == TorrentState.Hashing))
             {
-                return State.Queued;
+                return WebState.Queued;
             }
             else if ((state == TorrentState.Downloading) || (state == TorrentState.Seeding))
             {
-                return State.Active;
+                return WebState.Active;
             }
             else
             {
-                return State.Stopped;
+                return WebState.Stopped;
             }
         }
 
@@ -839,6 +878,19 @@ namespace MonoTorrent.ClientService
         }
 
         /// <summary>
+        /// Converts a boolean value 
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        private WebOption BooleanAdapter(bool? value)
+        {
+            if (value.HasValue)
+                return value.Value ? WebOption.Enabled : WebOption.Disabled;
+            else
+                return WebOption.NotAllowed;
+        }
+
+        /// <summary>
         /// Helper method to load the index.html into an XmlDocument. Done OnStart() because it's rather slow.
         /// </summary>
         private void LoadIndexDocument()
@@ -847,7 +899,7 @@ namespace MonoTorrent.ClientService
 
             lock (indexDocument)
             {
-                string indexDocumentPath = Path.Combine(webui.FullName, indexFile);
+                string indexDocumentPath = Path.Combine(config.DirWebUI.FullName, indexFile);
                 using (FileStream data = File.OpenRead(indexDocumentPath))
                 {
                     indexDocument.Load(data);
@@ -856,7 +908,7 @@ namespace MonoTorrent.ClientService
             }
         }
 
-        enum State : int
+        enum WebState : int
         {
             Active = 201,
             Stopped = 136,
@@ -872,7 +924,7 @@ namespace MonoTorrent.ClientService
             High = 3
         }
 
-        enum Option : int
+        enum WebOption : int
         {
             NotAllowed = -1,
             Disabled = 0,

@@ -1,9 +1,11 @@
 ﻿using System;
+using System.IO;
+using System.Text;
 using System.Diagnostics;
 using System.ServiceProcess;
 using System.Configuration;
-using System.IO;
 using Newtonsoft.Json;
+using MonoTorrent.ClientService.Configuration;
 
 namespace MonoTorrent.ClientService
 {
@@ -24,11 +26,8 @@ namespace MonoTorrent.ClientService
 
             Trace.Listeners.Add(new ConsoleTraceListener());
 
-            string listenPrefix = ConfigurationManager.AppSettings["WebUI.HttpListenerPrefix"];
-            DirectoryInfo filesWebUI = new DirectoryInfo(ConfigurationManager.AppSettings["WebUI.Files"]);
-
             MonoTorrentClient service = new MonoTorrentClient();
-            ClientWebUI webUI = new ClientWebUI(filesWebUI, listenPrefix, service);
+            ClientWebUI webUI = new ClientWebUI(service);
 
             Console.WriteLine("Starting MonoTorrent engine...");
             service.StartService();
