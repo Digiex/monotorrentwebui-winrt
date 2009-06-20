@@ -29,5 +29,10 @@ namespace MonoTorrent.ClientService
 		{
 			return settingValues.GetEnumerator();
 		}
-	}
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+    }
 }
