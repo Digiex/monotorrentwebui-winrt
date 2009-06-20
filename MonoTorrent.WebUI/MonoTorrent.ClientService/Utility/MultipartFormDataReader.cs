@@ -175,7 +175,8 @@ namespace MonoTorrent.ClientService
             return headers;
 		}
 		
-		public void CopyData(Stream outputStream)        {
+		public void CopyData(Stream outputStream)
+        {
         	if(mode != ParsingMode.Data)
         		throw new InvalidOperationException(
         			"MultipartFormReader is not at a data segment."

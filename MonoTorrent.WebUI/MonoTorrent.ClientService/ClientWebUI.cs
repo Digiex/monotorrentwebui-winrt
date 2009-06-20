@@ -257,8 +257,10 @@ namespace MonoTorrent.ClientService
         /// </summary>
         private void Respond(HttpListenerContext context, HttpStatusCode httpStatusCode, string message)
         {
-            context.Response.StatusCode = (int)httpStatusCode;			
-            byte[] data = Encoding.UTF8.GetBytes(message);			
+            context.Response.StatusCode = (int)httpStatusCode;
+			
+            byte[] data = Encoding.UTF8.GetBytes(message);
+			
 			context.Response.ContentEncoding = Encoding.UTF8;
 			context.Response.OutputStream.Write(data, 0, data.Length);
 		}
