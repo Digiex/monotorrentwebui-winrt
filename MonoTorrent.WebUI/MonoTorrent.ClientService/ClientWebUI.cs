@@ -60,7 +60,8 @@ namespace MonoTorrent.ClientService
             if (monoTorrentService == null)
                 throw new ArgumentNullException("monoTorrentService");
 
-            InitializeComponent();
+            this.CanPauseAndContinue = true;
+            this.ServiceName = "MonoTorrent Web UI";
 
             listener = new HttpListener();
             service = monoTorrentService;
@@ -120,7 +121,7 @@ namespace MonoTorrent.ClientService
                 stopFlag = true;
                 listener.Stop();
 
-                // wait for request to finish
+                // wait for request to finish processing
                 if (!listenWorker.Join(5000))
                 {
                     // taking too long
@@ -190,19 +191,22 @@ namespace MonoTorrent.ClientService
 
                 try
                 {
+					TraceWriteLine("Waiting for HTTP request...");
                     context = listener.GetContext();
 
+					TraceHttpRequest(context);
+					
                     lock (requestProcessLock)
                     {
-                        Trace.WriteLine("Received request: " + context.Request.RawUrl);
-
                         MarshalRequest(context);
                     }
+                    
+                    TraceHttpResponse(context);
                 }
                 catch (ObjectDisposedException) { } // listener.Abort() was called
                 catch (Exception ex)
                 {
-                    Trace.WriteLine("Error: " + ex.Message);
+                    Trace.WriteLine("Error: " + ex.ToString());
                 }
                 finally
                 {
@@ -253,13 +257,85 @@ namespace MonoTorrent.ClientService
         /// </summary>
         private void Respond(HttpListenerContext context, HttpStatusCode httpStatusCode, string message)
         {
-            context.Response.StatusCode = (int)httpStatusCode;
+            context.Response.StatusCode = (int)httpStatusCode;			
+            byte[] data = Encoding.UTF8.GetBytes(message);			
+			context.Response.ContentEncoding = Encoding.UTF8;
+			context.Response.OutputStream.Write(data, 0, data.Length);
+		}
+		
+		[Conditional("TRACE")]
+		private static void TraceHttpRequest(HttpListenerContext context)
+		{
+			TraceWriteLine("HttpListenerRequest");
+			TraceWriteLine("{");
+			if(context.User != null && context.User.Identity != null)
+				TraceWriteLine("   User:     {0} ({1})", context.User.Identity.Name, context.User.Identity.AuthenticationType);
+			else 
+				TraceWriteLine("   User:     null");
+			TraceWriteLine("   From:     {1} {0}", context.Request.UserAgent, context.Request.RemoteEndPoint);
+			TraceWriteLine("   Request:  {1} {0}", context.Request.RawUrl, context.Request.HttpMethod);
+			TraceWriteLine("   Accepts:  {0}", context.Request.AcceptTypes);
+			if(context.Request.HasEntityBody)
+				TraceWriteLine("   Content:  {0} ({1} bytes)", context.Request.ContentType, context.Request.ContentLength64);
+			TraceWriteLine("   Encoding: {0}", context.Request.ContentEncoding);
+			TraceWriteLine("   Referrer: {0}", context.Request.UrlReferrer);
+			if(context.Request.Headers.Count > 0)
+			{
+				TraceWriteLine("   Headers:");
+				for(int i = 0; i < context.Request.Headers.Count; i++)
+				{
+					TraceWriteLine("      {0} = {1}", context.Request.Headers.GetKey(i), context.Request.Headers.Get(i));
+				}
+			}
+			if(context.Request.Cookies.Count > 0)
+			{
+				TraceWriteLine("   Cookies:");
+				foreach(Cookie ck in context.Request.Cookies)
+				{
+					TraceWriteLine("      {0}", ck);
+				}
+			}
+			TraceWriteLine("}");
+		}
 
-            byte[] data = Encoding.UTF8.GetBytes(message);
-
-            context.Response.ContentEncoding = Encoding.UTF8;
-            context.Response.OutputStream.Write(data, 0, data.Length);
-        }
+		[Conditional("TRACE")]
+		private static void TraceHttpResponse(HttpListenerContext context)
+		{
+			TraceWriteLine("HttpListenerResponse");
+			TraceWriteLine("{");
+			TraceWriteLine("   Status:   {0} {1}", context.Response.StatusCode, context.Response.StatusDescription);
+			if(!String.IsNullOrEmpty(context.Response.RedirectLocation))
+				TraceWriteLine("   Redirect: {0}", context.Response.RedirectLocation);
+			TraceWriteLine("   Content:  {0} ({1} bytes)", context.Response.ContentType, context.Response.ContentLength64);
+			TraceWriteLine("   Encoding: {0}", context.Response.ContentEncoding);
+//			if(context.Response.Headers.Count > 0)
+//			{
+//				TraceWriteLine("   Headers:");
+//				foreach(Header hd in context.Response.Headers)
+//				{
+//					TraceWriteLine("      {0}", hd);
+//				}
+//			}			
+			if(context.Response.Cookies.Count > 0)
+			{
+				TraceWriteLine("   Cookies:");
+				foreach(Cookie ck in context.Response.Cookies)
+				{
+					TraceWriteLine("      {0}", ck);
+				}
+			}
+			TraceWriteLine("}");
+		}
+		
+		private static void TraceWriteLine(string message)
+		{
+			Trace.WriteLine(message);
+		}
+		
+		private static void TraceWriteLine(string format, params object[] args)
+		{
+			Trace.WriteLine(String.Format(format, args));
+		}
 
         /// <summary>
         /// Responds to a request determined to be invalid.
@@ -275,12 +351,12 @@ namespace MonoTorrent.ClientService
         private void ProcessFile(HttpListenerContext context)
         {
             string filePath = context.Request.RawUrl.Substring(urlBase.Length);
-            string query = null;
+            //string query = null;
 
             int queryStart = filePath.IndexOf('?');
             if (queryStart > -1)
             {
-                query = filePath.Substring(queryStart);
+                //query = filePath.Substring(queryStart);
                 filePath = filePath.Substring(0, filePath.Length - queryStart);
             }
 
@@ -296,8 +372,13 @@ namespace MonoTorrent.ClientService
                 ProcessTokenRequest(context);
             else if (File.Exists(filePath))
             {
+            	//TODO: Set Response.ContentType
+            	
                 using (FileStream data = File.OpenRead(filePath))
                 {
+                	if(data.CanSeek)
+                		context.Response.ContentLength64 = data.Length;
+                    
                     byte[] buffer = new byte[1024];
                     int count;
 
@@ -363,7 +444,7 @@ namespace MonoTorrent.ClientService
             
             using (JsonWriter jsonWriter = new JsonWriter(new StreamWriter(Response.OutputStream, Response.ContentEncoding)))
             {
-                string token = Request.QueryString["token"];
+                //string token = Request.QueryString["token"];
                 string action = Request.QueryString["action"];
                 string hash = Request.QueryString["hash"];
                 bool list = String.CompareOrdinal(Request.QueryString["list"], "1") == 0;
@@ -373,7 +454,7 @@ namespace MonoTorrent.ClientService
                 jsonWriter.WriteStartObject();
 
                 jsonWriter.WritePropertyName("build");
-                jsonWriter.WriteValue(-1);
+                jsonWriter.WriteValue(config.BuildNumber);
 
                 try
                 {
@@ -433,15 +514,44 @@ namespace MonoTorrent.ClientService
                         case "add-file":
                             Response.ContentType = "text/plain";
                             jsonWriter.WritePropertyName("error");
-                            jsonWriter.WriteValue("Uploading torrent files currently not supported.");
+                            jsonWriter.WriteValue("file upload message");
+                            
+                            if(Request.HasEntityBody)
+                            {
+	                            TraceWriteLine("*-*-*-*-*-*-* Uploaded File *-*-*-*-*-*-*");
+	                            string tempFile = Path.GetTempFileName();
+	                            TraceWriteLine(tempFile);
+	                             
+	                            using(FileStream uploadWriter = File.OpenWrite(tempFile))
+	                            {
+	                            	
+	                            	                    
+	                            	byte[] dataBuf = new byte[1024];
+	                            	int count;
+	                            	int total = 0;
+	                            	Request.ContentEncoding.GetString(dataBuf, 0, dataBuf.Length);
+	                            	while((count = Request.InputStream.Read(dataBuf, 0, dataBuf.Length)) > 0)
+	                            	{
+	                            		uploadWriter.Write(dataBuf, 0, count);
+	                            		total += count;
+	                            	}
+	                            	TraceWriteLine("Copied {0} bytes.", total);
+	                            }
+	                            TraceWriteLine("*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*");
+                            }
+                            else
+                            {
+                            	TraceWriteLine("add-file: No entity body in request!");
+							}
                             break;
                         case "add-url":
                             string url = Request.QueryString["s"];
-                            System.Net.WebClient web = new System.Net.WebClient();
-                            byte[] data = web.DownloadData(url);
-                            
-                            AddFile(new MemoryStream(data, 0, data.Length, false, false));
-                            
+                            using(System.Net.WebClient web = new System.Net.WebClient())
+                            {
+                            	byte[] data = web.DownloadData(url);
+                            	
+                            	AddFile(new MemoryStream(data, 0, data.Length, false, false));
+                            }
                             break;
 
                         case null: 
@@ -597,9 +707,9 @@ namespace MonoTorrent.ClientService
             {
                 writer.WriteStartArray();
                 foreach (TorrentFile file in details.FileManager.Files)
-                {
+				{
                     writer.WriteStartArray();
-
+                    
                     writer.WriteValue(file.Path);   //FILE NAME (string)
                     writer.WriteValue(file.Length); //FILE SIZE (integer in bytes)
                     writer.WriteValue(0);           //DOWNLOADED (integer in bytes)

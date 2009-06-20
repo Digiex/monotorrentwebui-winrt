@@ -52,7 +52,7 @@ namespace MonoTorrent.ClientService
         /// 
         /// </summary>
         /// <returns>EngineSettings instance.</returns>
-        private EngineSettings GetClientEngineSettings()
+        protected EngineSettings GetClientEngineSettings()
         {
             EngineSettings settings = new EngineSettings(
                 config.SavePath.ToString(),
@@ -86,7 +86,7 @@ namespace MonoTorrent.ClientService
         /// Applies the currently loaded configuration section.
         /// </summary>
         private void ApplyConfiguration()
-        {
+        {			
             client.Settings.SavePath = config.SavePath.ToString();
 
             if (!client.Listener.Endpoint.Equals(config.ListenEndPoint))

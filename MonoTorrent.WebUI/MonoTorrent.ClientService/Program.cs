@@ -1,11 +1,6 @@
 ﻿using System;
-using System.IO;
-using System.Text;
 using System.Diagnostics;
 using System.ServiceProcess;
-using System.Configuration;
-using Newtonsoft.Json;
-using MonoTorrent.ClientService.Configuration;
 
 namespace MonoTorrent.ClientService
 {
@@ -16,15 +11,17 @@ namespace MonoTorrent.ClientService
         /// </summary>
         static void Main()
         {
-            //MonoTorrentClient client = new MonoTorrentClient();
-            //ServiceBase[] servicesToRun = new ServiceBase[] 
-            //{ 
-            //    client,
-            //    new ClientWebUI(filesWebUI, webUIport, client)
-            //};
+            //MonoTorrentClient service = new MonoTorrentClient();
+            //ClientWebUI webUI = new ClientWebUI(service);
+            //ServiceBase[] servicesToRun = new ServiceBase[] { service, webUI };
             //ServiceBase.Run(servicesToRun);
 
-            Trace.Listeners.Add(new ConsoleTraceListener());
+			RunDebug();
+        }
+		
+		static void RunDebug()
+		{
+			Trace.Listeners.Add(new ConsoleTraceListener());
 
             MonoTorrentClient service = new MonoTorrentClient();
             ClientWebUI webUI = new ClientWebUI(service);
@@ -35,7 +32,7 @@ namespace MonoTorrent.ClientService
 
             Console.WriteLine("Starting WebUI...");
             webUI.StartService();
-            Console.WriteLine("WebUI started.");
+            Console.WriteLine("WebUI running.");
 
             while (Console.ReadKey().Key != ConsoleKey.Escape) { }
 
@@ -48,6 +45,6 @@ namespace MonoTorrent.ClientService
             Console.WriteLine("MonoTorrent engine stopped.");
 
             Console.ReadKey();
-        }
+		}
     }
 }

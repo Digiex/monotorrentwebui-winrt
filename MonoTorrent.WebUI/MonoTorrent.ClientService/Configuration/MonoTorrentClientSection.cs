@@ -24,12 +24,21 @@ namespace MonoTorrent.ClientService.Configuration
 
             ConfigurationProperty listenAddress = new ConfigurationProperty("listenAddress",
                 typeof(IPAddress), IPAddress.Any,
-                new TypeConverter(),
+                new IPAddressConverter(),
                 new DefaultValidator(),
                 ConfigurationPropertyOptions.None,
                 "IP Address to listen (optional)."
                 );
             Properties.Add(listenAddress);
+
+			ConfigurationProperty encryptionFlags = new ConfigurationProperty("encryptionFlags",
+                typeof(EncryptionTypes), EncryptionTypes.All,
+                new EncryptionTypesConverter(),
+                new DefaultValidator(),
+                ConfigurationPropertyOptions.None,
+                "Accepted types of encryption."
+                );
+            Properties.Add(encryptionFlags);
         }
 
         public DirectoryInfo SavePath
@@ -89,7 +98,7 @@ namespace MonoTorrent.ClientService.Configuration
             set { this["maxUploadRate"] = value; }
         }
 
-        [ConfigurationProperty("encryptionFlags", DefaultValue = 0, IsRequired = false)]
+        //[ConfigurationProperty("encryptionFlags", DefaultValue = 0, IsRequired = false)]
         public EncryptionTypes EncryptionFlags
         {
             get { return (EncryptionTypes)this["encryptionFlags"]; }
