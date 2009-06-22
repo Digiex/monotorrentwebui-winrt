@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("MonoTorrent.ClientService")]
-[assembly: AssemblyDescription("MonoTorrent client with µTorrent's WebUI")]
+[assembly: AssemblyDescription("MonoTorrent client with \u00B5Torrent's WebUI")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("MonoTorrent WebUI")]

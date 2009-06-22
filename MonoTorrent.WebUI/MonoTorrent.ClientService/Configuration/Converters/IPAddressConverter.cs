@@ -3,7 +3,7 @@ using System.Globalization;
 using System.ComponentModel;
 using System.Net;
 
-namespace MonoTorrent.ClientService.Configuration
+namespace MonoTorrent.ClientService.Configuration.Converters
 {
     internal class IPAddressConverter : TypeConverter
     {

@@ -4,8 +4,11 @@ using System.Text;
 using System.Globalization;
 using System.ComponentModel;
 
-namespace MonoTorrent.ClientService.Configuration
+namespace MonoTorrent.ClientService.Configuration.Converters
 {
+    /// <summary>
+    /// Converts a string into a System.IO.DirectoryInfo object and vice-versa.
+    /// </summary>
     internal class DirectoryInfoConverter : TypeConverter
     {
         public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)

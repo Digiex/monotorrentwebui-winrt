@@ -16,33 +16,34 @@ namespace MonoTorrent.ClientService
             //ServiceBase[] servicesToRun = new ServiceBase[] { service, webUI };
             //ServiceBase.Run(servicesToRun);
 
-			RunDebug();
+			RunConsole();
         }
-		
-		static void RunDebug()
+
+        [Conditional("DEBUG")]
+		static void RunConsole()
 		{
 			Trace.Listeners.Add(new ConsoleTraceListener());
 
-            MonoTorrentClient service = new MonoTorrentClient();
-            ClientWebUI webUI = new ClientWebUI(service);
+            MonoTorrentClient torrent = new MonoTorrentClient();
+            ClientWebUI webUI = new ClientWebUI(torrent);
 
-            Console.WriteLine("Starting MonoTorrent engine...");
-            service.StartService();
-            Console.WriteLine("MonoTorrent engine started.");
+            Trace.WriteLine("Starting MonoTorrent engine...");
+            torrent.StartService();
+            Trace.WriteLine("MonoTorrent engine started.");
 
-            Console.WriteLine("Starting WebUI...");
-            webUI.StartService();
-            Console.WriteLine("WebUI running.");
+            Trace.WriteLine("Starting WebUI...");
+            webUI.SynthStart();
+            Trace.WriteLine("WebUI running.");
 
             while (Console.ReadKey().Key != ConsoleKey.Escape) { }
 
-            Console.WriteLine("Stopping WebUI...");
-            webUI.StopService();
-            Console.WriteLine("WebUI stopped.");
+            Trace.WriteLine("Stopping WebUI...");
+            webUI.SynthStop();
+            Trace.WriteLine("WebUI stopped.");
 
-            Console.WriteLine("Stopping MonoTorrent engine...");
-            service.StopService();
-            Console.WriteLine("MonoTorrent engine stopped.");
+            Trace.WriteLine("Stopping MonoTorrent engine...");
+            torrent.StopService();
+            Trace.WriteLine("MonoTorrent engine stopped.");
 
             Console.ReadKey();
 		}

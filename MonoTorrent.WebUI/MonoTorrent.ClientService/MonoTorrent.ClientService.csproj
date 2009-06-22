@@ -97,37 +97,34 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Configuration\ConfigurationSection.cs" />
+    <Compile Include="ITorrentController.cs" />
     <Compile Include="ClientWebUI.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="Configuration\DirectoryInfoConverter.cs" />
-    <Compile Include="Configuration\EncodingConverter.cs" />
-    <Compile Include="Configuration\IPAddressConverter.cs" />
+    <Compile Include="Configuration\Converters\DirectoryInfoConverter.cs" />
+    <Compile Include="Configuration\Converters\EncodingConverter.cs" />
+    <Compile Include="Configuration\Converters\IPAddressConverter.cs" />
     <Compile Include="Configuration\MonoTorrentClientSection.cs" />
     <Compile Include="Configuration\WebUISection.cs" />
-    <Compile Include="Settings.cs" />
+    <Compile Include="ConfiguredServiceBase.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="MonoTorrentClient.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="MonoTorrentClient.Designer.cs">
-      <DependentUpon>MonoTorrentClient.cs</DependentUpon>
-    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Configuration\EncryptionTypesConverter.cs" />
+    <Compile Include="Configuration\Converters\EncryptionTypesConverter.cs" />
+    <Compile Include="SetSettingsEventArgs.cs" />
     <Compile Include="Utility\MultipartFormDataReader.cs" />
-    <Compile Include="WebUISettingsAdapter.cs" />
+    <Compile Include="SettingsAdapter.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="ClientWebUI.resx">
-      <DependentUpon>ClientWebUI.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="MonoTorrentClient.resx">
-      <DependentUpon>MonoTorrentClient.cs</DependentUpon>
-    </EmbeddedResource>
+    <Compile Include="ClientWebUI.HttpServer.cs">
+      <SubType>Component</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Content Include="WebUI\contextmenu.js">
@@ -368,9 +365,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="WebUI\stable.js">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="WebUI\StaticSettings.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="WebUI\tabs.js">
