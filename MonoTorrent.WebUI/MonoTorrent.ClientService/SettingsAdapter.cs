@@ -1,9 +1,3 @@
-// SettingsAdapter.cs created with MonoDevelop
-// User: serguei at 16:45 29.03.2009
-//
-// To change standard headers go to Edit->Preferences->Coding->Standard Headers
-//
-
 using System;
 using System.Collections.Generic;
 using MonoTorrent.Client;
@@ -53,7 +47,7 @@ namespace MonoTorrent.ClientService
         /// </summary>
         private void InitializeSettingMappings()
         {
-            /* Example usage:
+            /* Intended usage:
              *                      // WebUI name  // type of value
              *      RegisterSetting("max_dl_rate", WebSettingType.Integer,
              *          ()    => torrent.MaxDownloadRate,                   // getter function

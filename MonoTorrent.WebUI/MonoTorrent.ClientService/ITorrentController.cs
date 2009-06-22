@@ -113,7 +113,7 @@ namespace MonoTorrent.ClientService
         bool SetTorrentLabel(string torrentID, string label);
 
         /// <summary>
-        /// Returns enumeration of distinct labels.
+        /// Returns a list of torrent labels and the number of torrents using that label.
         /// </summary>
         IEnumerable<KeyValuePair<string, int>> GetAllLabels();
 

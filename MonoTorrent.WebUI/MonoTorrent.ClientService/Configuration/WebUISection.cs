@@ -7,6 +7,9 @@ using MonoTorrent.ClientService.Configuration.Converters;
 
 namespace MonoTorrent.ClientService.Configuration
 {
+    /// <summary>
+    /// Configuration for the WebUI service.
+    /// </summary>
     public class WebUISection : MonoTorrent.ClientService.Configuration.ConfigurationSection
     {
         /// <summary>
@@ -63,7 +66,6 @@ namespace MonoTorrent.ClientService.Configuration
         /// <summary>
         /// Directory containing WebUI files.
         /// </summary>
-        //[ConfigurationProperty("path", IsRequired = true)]
         public DirectoryInfo DirWebUI
         {
             get { return (DirectoryInfo)this["path"]; }
@@ -77,7 +79,7 @@ namespace MonoTorrent.ClientService.Configuration
 
         /// <summary>
         /// Prefix URL pattern to which the server listens. 
-        /// Format: "http://[hostname]:[port]/gui/", hostname can be a wild card (* or +).
+        /// See <see cref="System.Net.HttpListener"/> for format.
         /// </summary>
         [ConfigurationProperty("httpPrefix", DefaultValue = "http://*/gui/", IsRequired = true)]
         [RegexStringValidator(@"https?://(([a-zA-Z0-9]+(.[a-zA-Z0-9]+)*[a-zA-Z0-9])|[+]|[*])(:[0-9]{1,5})?/gui/")]

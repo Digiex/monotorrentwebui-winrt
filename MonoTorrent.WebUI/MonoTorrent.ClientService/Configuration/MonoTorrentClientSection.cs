@@ -10,6 +10,9 @@ using MonoTorrent.ClientService.Configuration.Converters;
 
 namespace MonoTorrent.ClientService.Configuration
 {
+    /// <summary>
+    /// COnfiguration for MonoTorrent client service.
+    /// </summary>
     public class MonoTorrentClientSection : MonoTorrent.ClientService.Configuration.ConfigurationSection
     {
         /// <summary>

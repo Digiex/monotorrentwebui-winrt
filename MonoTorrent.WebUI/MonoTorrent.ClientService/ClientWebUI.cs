@@ -13,7 +13,7 @@ namespace MonoTorrent.ClientService
 {
     /// <summary>
     /// Service implementation.
-    /// </summary>kk
+    /// </summary>
     public partial class ClientWebUI : ConfiguredServiceBase<WebUISection>
     {
         /// <summary>
@@ -92,7 +92,7 @@ namespace MonoTorrent.ClientService
 
         #endregion
 
-        #region WebUI --> ITorrentController Adapter Methods
+        #region WebUI <--> ITorrentController Adapter Methods
 
         // These functions call the appropriate methods of ITorrentController
         // and print the JSON response data.
