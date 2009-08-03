@@ -429,7 +429,14 @@ namespace MonoTorrent.ClientService
                             break;
                         case "add-file":
                             Response.ContentType = "text/plain";
-                            errorMessages.Add("File uploads are not yet supported by the server. Please use URL fetcher.");
+                            //errorMessages.Add("File uploads are not yet supported by the server. Please use URL fetcher.");
+                            
+                            int count = 0;
+                            byte[] buffer = new byte[1024];
+                            using(FileStream dump = File.OpenWrite("fileupload.bin"))
+                                while((count = Request.InputStream.Read(buffer, 0, buffer.Length)) != 0)
+                                    dump.Write(buffer, 0, count);
+
                             break;
                         case "add-url":
                             string url = Request.QueryString["s"];

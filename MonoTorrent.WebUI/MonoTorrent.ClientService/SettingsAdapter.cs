@@ -175,6 +175,7 @@ namespace MonoTorrent.ClientService
                 value => bool.Parse(value)
                 );
 
+            #region Bandwidth
             RegisterSetting("max_dl_rate", WebSettingType.Integer,
                 ()    => torrent.MaxDownloadRate,
                 value => torrent.MaxDownloadRate = int.Parse(value)
@@ -199,11 +200,13 @@ namespace MonoTorrent.ClientService
                 ()    => false,
                 value => bool.Parse(value)
                 );
+            #endregion
 
+            #region gui.*
             RegisterSetting("gui.ulrate_menu", WebSettingType.String,
                 ()    => "0,5,10,15,20,30,40,50,100,150,200,300,400,500",
                 value => String.IsNullOrEmpty(value)
-                );
+            );
 
             RegisterSetting("gui.dlrate_menu", WebSettingType.String,
                 ()    => "0,5,10,15,20,30,40,50,100,150,200,300,400,500",
@@ -228,7 +231,78 @@ namespace MonoTorrent.ClientService
             RegisterSetting("gui.alternate_color", WebSettingType.Boolean,
                 ()    => false,
                 value => bool.Parse(value)
+                ); 
+
+             RegisterSetting("gui.dblclick_seed", WebSettingType.Integer,
+                ()    => 0,
+                value => int.Parse(value)
                 );
+
+            RegisterSetting("gui.dblclick_dl", WebSettingType.Integer,
+                ()    => 0,
+                value => int.Parse(value)
+                );
+
+            RegisterSetting("gui.update_rate", WebSettingType.Integer,
+                ()    => 1000,
+                value => int.Parse(value)
+                );
+
+            RegisterSetting("gui.sg_mode", WebSettingType.Integer,
+                ()    => 1,
+                value => int.Parse(value)
+                );
+
+            RegisterSetting("gui.delete_to_trash", WebSettingType.Boolean,
+                ()    => true,
+                value => bool.Parse(value)
+                );
+
+            RegisterSetting("gui.default_del_action", WebSettingType.Integer,
+                ()    => 0,
+                value => int.Parse(value)
+                );
+
+            RegisterSetting("gui.speed_in_title", WebSettingType.Boolean,
+                ()    => false,
+                value => bool.Parse(value)
+                );
+
+            RegisterSetting("gui.limits_in_statusbar", WebSettingType.Boolean,
+                ()    => false,
+                value => bool.Parse(value)
+                );
+
+            RegisterSetting("gui.graphic_progress", WebSettingType.Boolean,
+                ()    => true,
+                value => bool.Parse(value)
+                );
+
+            RegisterSetting("gui.piecebar_progress", WebSettingType.Boolean,
+                ()    => false,
+                value => bool.Parse(value)
+                );
+
+            RegisterSetting("gui.tall_category_list", WebSettingType.Boolean,
+                ()    => true,
+                value => bool.Parse(value)
+                );
+
+            RegisterSetting("gui.bypass_search_redirect", WebSettingType.Boolean,
+                ()    => false,
+                value => bool.Parse(value)
+                );
+
+            RegisterSetting("gui.last_preference_tab-1.8", WebSettingType.Integer,
+                ()    => 8,
+                value => int.Parse(value)
+                );
+
+            RegisterSetting("gui.last_overview_tab-1.8", WebSettingType.Integer,
+                ()    => 0,
+                value => int.Parse(value)
+                );
+            #endregion
 
             RegisterSetting("sys.prevent_standby", WebSettingType.Boolean,
                 ()    => true,
@@ -294,7 +368,7 @@ namespace MonoTorrent.ClientService
                 ()    => true,
                 value => bool.Parse(value)
                 );
-
+            
             RegisterSetting("mainwnd_split", WebSettingType.Integer,
                 ()    => 172,
                 value => int.Parse(value)
@@ -645,80 +719,11 @@ namespace MonoTorrent.ClientService
                 value => bool.Parse(value)
                 );
 
-            RegisterSetting("gui.dblclick_seed", WebSettingType.Integer,
-                ()    => 0,
-                value => int.Parse(value)
-                );
-
-            RegisterSetting("gui.dblclick_dl", WebSettingType.Integer,
-                ()    => 0,
-                value => int.Parse(value)
-                );
-
-            RegisterSetting("gui.update_rate", WebSettingType.Integer,
-                ()    => 1000,
-                value => int.Parse(value)
-                );
-
-            RegisterSetting("gui.sg_mode", WebSettingType.Integer,
-                ()    => 1,
-                value => int.Parse(value)
-                );
-
-            RegisterSetting("gui.delete_to_trash", WebSettingType.Boolean,
-                ()    => true,
-                value => bool.Parse(value)
-                );
-
-            RegisterSetting("gui.default_del_action", WebSettingType.Integer,
-                ()    => 0,
-                value => int.Parse(value)
-                );
-
-            RegisterSetting("gui.speed_in_title", WebSettingType.Boolean,
-                ()    => false,
-                value => bool.Parse(value)
-                );
-
-            RegisterSetting("gui.limits_in_statusbar", WebSettingType.Boolean,
-                ()    => false,
-                value => bool.Parse(value)
-                );
-
-            RegisterSetting("gui.graphic_progress", WebSettingType.Boolean,
-                ()    => true,
-                value => bool.Parse(value)
-                );
-
-            RegisterSetting("gui.piecebar_progress", WebSettingType.Boolean,
-                ()    => false,
-                value => bool.Parse(value)
-                );
-
-            RegisterSetting("gui.tall_category_list", WebSettingType.Boolean,
-                ()    => true,
-                value => bool.Parse(value)
-                );
-
-            RegisterSetting("gui.bypass_search_redirect", WebSettingType.Boolean,
-                ()    => false,
-                value => bool.Parse(value)
-                );
-
-            RegisterSetting("gui.last_preference_tab-1.8", WebSettingType.Integer,
-                ()    => 8,
-                value => int.Parse(value)
-                );
-
-            RegisterSetting("gui.last_overview_tab-1.8", WebSettingType.Integer,
-                ()    => 0,
-                value => int.Parse(value)
-                );
-
+            #region queue.*
             RegisterSetting("queue.dont_count_slow_dl", WebSettingType.Boolean,
                 ()    => true,
                 value => bool.Parse(value)
-                );
+            );
 
             RegisterSetting("queue.dont_count_slow_ul", WebSettingType.Boolean,
                 ()    => true,
@@ -743,188 +748,196 @@ namespace MonoTorrent.ClientService
             RegisterSetting("queue.prio_no_seeds", WebSettingType.Boolean,
                 ()    => true,
                 value => bool.Parse(value)
-                );
+                ); 
+            #endregion
 
+            #region bt.*
             RegisterSetting("bt.auto_ul_interval", WebSettingType.Integer,
                 ()    => 600,
                 value => int.Parse(value)
-                );
+            );
 
             RegisterSetting("bt.auto_ul_sample_window", WebSettingType.Integer,
-                ()    => 30,
+                () => 30,
                 value => int.Parse(value)
                 );
 
             RegisterSetting("bt.auto_ul_sample_average", WebSettingType.Integer,
                 ()    => 10,
                 value => int.Parse(value)
-                );
+            );
 
             RegisterSetting("bt.auto_ul_min", WebSettingType.Integer,
-                ()    => 8500,
+                () => 8500,
                 value => int.Parse(value)
                 );
 
             RegisterSetting("bt.auto_ul_factor", WebSettingType.Integer,
-                ()    => 80,
+                () => 80,
                 value => int.Parse(value)
                 );
 
             RegisterSetting("bt.transp_disposition", WebSettingType.Integer,
-                ()    => 13,
+                () => 13,
                 value => int.Parse(value)
                 );
 
             RegisterSetting("bt.scrape_stopped", WebSettingType.Boolean,
-                ()    => false,
+                () => false,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("bt.compact_allocation", WebSettingType.Boolean,
-                ()    => false,
+                () => false,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("bt.enable_tracker", WebSettingType.Boolean,
-                ()    => false,
+                () => false,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("bt.multiscrape", WebSettingType.Boolean,
-                ()    => true,
+                () => true,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("bt.send_have_to_seed", WebSettingType.Boolean,
-                ()    => true,
+                () => true,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("bt.set_sockbuf", WebSettingType.Boolean,
-                ()    => false,
+                () => false,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("bt.connect_speed", WebSettingType.Integer,
-                ()    => 20,
+                () => 20,
                 value => int.Parse(value)
                 );
 
             RegisterSetting("bt.prio_first_last_piece", WebSettingType.Boolean,
-                ()    => false,
+                () => false,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("bt.allow_same_ip", WebSettingType.Boolean,
-                ()    => false,
+                () => false,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("bt.no_connect_to_services", WebSettingType.Boolean,
-                ()    => true,
+                () => true,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("bt.no_connect_to_services_list", WebSettingType.String,
-                ()    => "25,110,6666,6667",
+                () => "25,110,6666,6667",
                 value => String.IsNullOrEmpty(value)
                 );
 
             RegisterSetting("bt.ban_threshold", WebSettingType.Integer,
-                ()    => 3,
+                () => 3,
                 value => int.Parse(value)
                 );
 
             RegisterSetting("bt.use_ban_ratio", WebSettingType.Boolean,
-                ()    => true,
+                () => true,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("bt.ban_ratio", WebSettingType.Integer,
-                ()    => 128,
+                () => 128,
                 value => int.Parse(value)
                 );
 
             RegisterSetting("bt.use_rangeblock", WebSettingType.Boolean,
-                ()    => true,
+                () => true,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("bt.graceful_shutdown", WebSettingType.Boolean,
-                ()    => true,
+                () => true,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("bt.shutdown_tracker_timeout", WebSettingType.Integer,
-                ()    => 15,
+                () => 15,
                 value => int.Parse(value)
                 );
 
             RegisterSetting("bt.shutdown_upnp_timeout", WebSettingType.Integer,
-                ()    => 5,
+                () => 5,
                 value => int.Parse(value)
-                );
+                ); 
+            #endregion
 
+            #region peer.*
             RegisterSetting("peer.lazy_bitfield", WebSettingType.Boolean,
                 ()    => true,
                 value => bool.Parse(value)
-                );
+            );
 
             RegisterSetting("peer.resolve_country", WebSettingType.Boolean,
-                ()    => false,
+                () => false,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("peer.disconnect_inactive", WebSettingType.Boolean,
-                ()    => true,
+                () => true,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("peer.disconnect_inactive_interval", WebSettingType.Integer,
-                ()    => 300,
+                () => 300,
                 value => int.Parse(value)
-                );
+                ); 
+            #endregion
 
+            #region diskio.*
             RegisterSetting("diskio.flush_files", WebSettingType.Boolean,
                 ()    => true,
                 value => bool.Parse(value)
-                );
+            );
 
             RegisterSetting("diskio.sparse_files", WebSettingType.Boolean,
-                ()    => false,
+                () => false,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("diskio.no_zero", WebSettingType.Boolean,
-                ()    => true,
+                () => true,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("diskio.use_partfile", WebSettingType.Boolean,
-                ()    => true,
+                () => true,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("diskio.smart_hash", WebSettingType.Boolean,
-                ()    => true,
+                () => true,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("diskio.smart_sparse_hash", WebSettingType.Boolean,
-                ()    => true,
+                () => true,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("diskio.coalesce_writes", WebSettingType.Boolean,
-                ()    => true,
+                () => true,
                 value => bool.Parse(value)
                 );
 
             RegisterSetting("diskio.coalesce_write_size", WebSettingType.Integer,
-                ()    => 2097152,
+                () => 2097152,
                 value => int.Parse(value)
-                );
+                ); 
+            #endregion
 
+            #region cache.*
             RegisterSetting("cache.override", WebSettingType.Boolean,
                 ()    => false,
                 value => bool.Parse(value)
@@ -984,57 +997,61 @@ namespace MonoTorrent.ClientService
                 ()    => true,
                 value => bool.Parse(value)
                 );
+            #endregion
 
+            #region webui.*
             RegisterSetting("webui.enable", WebSettingType.Integer,
                 ()    => 1,
-                value => int.Parse(value)
+                value => { /* start/stop the service instead */ }
+                );
+
+            RegisterSetting("webui.username", WebSettingType.String,
+                () => webui.AdminUsername,
+                value => webui.AdminUsername = value
+                );
+
+            RegisterSetting("webui.password", WebSettingType.String,
+                () => "************",
+                value => webui.SetAdminPassword(value)
                 );
 
             RegisterSetting("webui.enable_guest", WebSettingType.Integer,
-                ()    => 0,
-                value => int.Parse(value)
+                () => webui.EnableGuest ? 1 : 0,
+                value => webui.EnableGuest = int.Parse(value) > 0 ? true : false
+                );
+
+            RegisterSetting("webui.guest", WebSettingType.String,
+                () => webui.GuestAccount,
+                value => webui.GuestAccount = value
                 );
 
             RegisterSetting("webui.enable_listen", WebSettingType.Integer,
-                ()    => 1,
+                () => 1,
                 value => int.Parse(value)
                 );
 
             RegisterSetting("webui.token_auth", WebSettingType.Boolean,
-                ()    => false,
+                () => false,
                 value => bool.Parse(value)
                 );
 
-            RegisterSetting("webui.username", WebSettingType.String,
-                ()    => "admin",
-                value => String.IsNullOrEmpty(value)
-                );
-
-            RegisterSetting("webui.password", WebSettingType.String,
-                ()    => "******",
-                value => String.IsNullOrEmpty(value)
-                );
-
-            RegisterSetting("webui.guest", WebSettingType.String,
-                ()    => "guest",
-                value => String.IsNullOrEmpty(value)
-                );
-
             RegisterSetting("webui.restrict", WebSettingType.String,
-                ()    => "",
+                () => "",
                 value => String.IsNullOrEmpty(value)
                 );
 
             RegisterSetting("webui.port", WebSettingType.Integer,
-                ()    => 8080,
+                () => new Uri(webui.HttpListenerPrefix).Port,
                 value => int.Parse(value)
                 );
 
             RegisterSetting("webui.cookie", WebSettingType.String,
-                ()    => "{}",
+                () => "{}",
                 value => String.IsNullOrEmpty(value)
-                );
+                ); 
+            #endregion
 
+            #region proxy.*
             RegisterSetting("proxy.proxy", WebSettingType.String,
                 ()    => "",
                 value => String.IsNullOrEmpty(value)
@@ -1074,6 +1091,7 @@ namespace MonoTorrent.ClientService
                 ()    => "",
                 value => String.IsNullOrEmpty(value)
                 );
+            #endregion
         }
 
         /// <summary>

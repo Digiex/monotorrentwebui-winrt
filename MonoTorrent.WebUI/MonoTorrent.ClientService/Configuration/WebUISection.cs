@@ -4,6 +4,7 @@ using System.Text;
 using System.Configuration;
 using System.Collections.Generic;
 using MonoTorrent.ClientService.Configuration.Converters;
+using System.Security.Cryptography;
 
 namespace MonoTorrent.ClientService.Configuration
 {
@@ -16,6 +17,12 @@ namespace MonoTorrent.ClientService.Configuration
         /// Default name for this configuration section.
         /// </summary>
         public const string SectionName = "WebUI";
+
+        /// <summary>
+        /// Instance of the machine's default hash algorithm. 
+        /// (Used for hashing passwords.)
+        /// </summary>
+        private static readonly HashAlgorithm hashAlg = HashAlgorithm.Create();
 
         /// <summary>
         /// Initializes a new instance of WebUI configuration section.
@@ -42,6 +49,12 @@ namespace MonoTorrent.ClientService.Configuration
                 "Encoding used for web responses."
                 );
             Properties.Add(respEnc);
+
+            ConfigurationProperty adminPass = new ConfigurationProperty("adminPass",
+                typeof(string), null,
+                ConfigurationPropertyOptions.None
+                );
+            Properties.Add(adminPass);
         }
 
         /// <summary>
@@ -87,6 +100,65 @@ namespace MonoTorrent.ClientService.Configuration
         {
             get { return (string)this["httpPrefix"]; }
             set { this["httpPrefix"] = value; OnPropertyChanged("HttpListenerPrefix"); }
+        }
+
+        /// <summary>
+        /// Admin username.
+        /// </summary>
+        [ConfigurationProperty("adminUser", DefaultValue = "admin", IsRequired = false)]
+        public string AdminUsername
+        {
+            get { return (string)this["adminUser"]; }
+            set { this["adminUser"] = value; OnPropertyChanged("AdminUsername"); }
+        }
+
+
+        /// <summary>
+        /// Stores the hashed admin user's password.
+        /// </summary>
+        /// <param name="clearPassword"></param>
+        public void SetAdminPassword(string clearPassword)
+        {
+            byte[] passwBytes = Encoding.Default.GetBytes(clearPassword);
+            byte[] passwHash = hashAlg.ComputeHash(passwBytes);
+
+            this["adminPass"] = MonoTorrent.Common.Toolbox.ToHex(passwHash);
+        }
+
+        /// <summary>
+        /// Determines if the <paramref name="candidate"/> matches the original password.
+        /// </summary>
+        /// <param name="candidate">Candidate password supplied by user.</param>
+        /// <returns>True if the two match, false otherwise.</returns>
+        public bool MatchAdminPassword(string candidate)
+        {
+            byte[] candBytes = Encoding.Default.GetBytes(candidate);
+            byte[] candHash = hashAlg.ComputeHash(candBytes);
+
+            string candHex = MonoTorrent.Common.Toolbox.ToHex(candHash);
+            string passHex = (string)this["adminPass"];
+
+            return String.Equals(candHex, passHex, StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        /// <summary>
+        /// True if guest account access should be enabled.
+        /// </summary>
+        [ConfigurationProperty("enableGuest", DefaultValue = false, IsRequired = false)]
+        public bool EnableGuest
+        {
+            get { return (bool)this["enableGuest"]; }
+            set { this["enableGuest"] = value; OnPropertyChanged("EnableGuest"); }
+        }
+
+        /// <summary>
+        /// Guest account name.
+        /// </summary>
+        [ConfigurationProperty("guestAccount", DefaultValue = "guest", IsRequired = false)]
+        public string GuestAccount
+        {
+            get { return (string)this["guestAccount"]; }
+            set { this["guestAccount"] = value; OnPropertyChanged("GuestAccount"); }
         }
     }
 }
