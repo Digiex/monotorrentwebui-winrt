@@ -7,6 +7,7 @@ using System.IO;
 using Newtonsoft.Json;
 using System.Threading;
 using System.Xml;
+using System.Text.RegularExpressions;
 
 namespace MonoTorrent.ClientService
 {
@@ -106,10 +107,6 @@ namespace MonoTorrent.ClientService
         #region HTTP Request Handling
 
         #region Constants
-        private const string urlBase = "/gui/";
-        private const string urlBaseWithQuery = "/gui/?";
-        private const string urlBaseNoSlash = "/gui";
-        private const string urlBaseNoSlashQuery = "/gui?";
         private const string indexFile = "index.html";
         private const string tokenFile = "token.html";
         #endregion
@@ -203,35 +200,25 @@ namespace MonoTorrent.ClientService
         /// </summary>
         private void MarshalRequest(HttpListenerContext context)
         {
-            if (!context.Request.RawUrl.StartsWith(urlBase)) // is request for "/gui/..."
+            if (Regex.IsMatch("^/gui/", context.Request.RawUrl))
             {
-                // maybe user forgot the trailing slash (i.e. "/gui" or "/gui?...")
-                if (context.Request.RawUrl.StartsWith(urlBaseNoSlashQuery)
-                 || context.Request.RawUrl.StartsWith(urlBaseNoSlash))
-                {
-                    string withMissingSlash;
-                    int queryStart = context.Request.RawUrl.IndexOf('?');
-
-                    if (queryStart > -1) // is there a query string?
-                        withMissingSlash = context.Request.RawUrl.Insert(queryStart, "/");
-                    else
-                        withMissingSlash = context.Request.RawUrl + "/";
-
-                    if (withMissingSlash.StartsWith(urlBase)) // point them to the right place
-                    {
-                        context.Response.StatusCode = (int)HttpStatusCode.MovedPermanently;
-                        context.Response.Redirect(withMissingSlash);
-                    }
-                    else
-                        ProcessInvalidRequest(context); // nope, can't fix it
-                }
+                if (context.Request.QueryString.Count > 0)
+                    ProcessQueryRequest(context); // /gui/some/path?token=...&action=...&hash=...
                 else
-                    ProcessInvalidRequest(context); // don't know what user is asking for
+                    ProcessFileRequest(context); // /gui/some/file.ext
             }
-            else if (context.Request.QueryString.Count > 0)
-                ProcessQueryRequest(context); /* /gui/some/path?token=...&action=...&hash=... */
+            else if (Regex.IsMatch("^/gui([?].*)?$", context.Request.RawUrl))
+            {
+                // Request is for /gui or /gui?<query>
+                // should be /gui/ or /gui/?<query>, 
+
+                string fixedUrl = context.Request.RawUrl.Insert("/gui".Length, "/");
+
+                context.Response.StatusCode = (int)HttpStatusCode.MovedPermanently;
+                context.Response.Redirect(fixedUrl);
+            }
             else
-                ProcessFileRequest(context); /* /gui/some/file.ext */
+                ProcessInvalidRequest(context); // we don't serve that here
         }
 
         /// <summary>
