@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
-using System.ServiceProcess;
+using MonoTorrent.WebUI.Server;
+using MonoTorrent.WebUI.Server.Configuration;
 
 namespace MonoTorrent.ClientService
 {
@@ -22,30 +23,38 @@ namespace MonoTorrent.ClientService
         [Conditional("DEBUG")]
 		static void RunConsole()
 		{
-			Trace.Listeners.Add(new ConsoleTraceListener());
+            InitTrace();
 
-            MonoTorrentClient torrent = new MonoTorrentClient();
-            ClientWebUI webUI = new ClientWebUI(torrent);
+            MonoTorrentClient monoTorrent = new MonoTorrentClient();
+            ServiceWebUI webUI = new ServiceWebUI(monoTorrent);
 
             Trace.WriteLine("Starting MonoTorrent engine...");
-            torrent.StartService();
+            monoTorrent.DebugStart();
             Trace.WriteLine("MonoTorrent engine started.");
 
             Trace.WriteLine("Starting WebUI...");
-            webUI.SynthStart();
+            webUI.DebugStart();
             Trace.WriteLine("WebUI running.");
-
+            
+            Console.WriteLine("(Press ESC to halt)");
             while (Console.ReadKey().Key != ConsoleKey.Escape) { }
 
             Trace.WriteLine("Stopping WebUI...");
-            webUI.SynthStop();
+            webUI.DebugStop();
             Trace.WriteLine("WebUI stopped.");
 
             Trace.WriteLine("Stopping MonoTorrent engine...");
-            torrent.StopService();
+            monoTorrent.DebugStop();
             Trace.WriteLine("MonoTorrent engine stopped.");
 
+            Console.WriteLine("Press any key to exit...");
             Console.ReadKey();
 		}
+
+        [Conditional("TRACE")]
+        static void InitTrace()
+        {
+            Trace.Listeners.Add(new ConsoleTraceListener());
+        }
     }
 }

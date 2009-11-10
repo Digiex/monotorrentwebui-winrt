@@ -1,22 +1,20 @@
 ﻿using System;
-using System.IO;
-using System.Net;
-using System.Threading;
-using System.Diagnostics;
-using System.Configuration;
-using System.ServiceProcess;
 using System.Collections.Generic;
-using MonoTorrent.Common;
+using System.Diagnostics;
+using System.IO;
+using System.Threading;
 using MonoTorrent.Client;
-using MonoTorrent.Client.Encryption;
 using MonoTorrent.ClientService.Configuration;
+using MonoTorrent.Common;
+using MonoTorrent.WebUI.Common;
+using MonoTorrent.WebUI.Configuration;
 
 namespace MonoTorrent.ClientService
 {
     /// <summary>
     /// Service running the BitTorrent client, has an API for controlling torrents.
     /// </summary>
-    public class MonoTorrentClient : ConfiguredServiceBase<MonoTorrentClientSection>, ITorrentController
+    public class MonoTorrentClient : ConfiguredServiceBase<ClientSection>, ITorrentController
     {
         /// <summary>
         /// MonoTorrent client engine.
@@ -37,7 +35,7 @@ namespace MonoTorrent.ClientService
         /// Creates a new instance of MonoTorrentClient.
         /// </summary>
         public MonoTorrentClient() 
-            : base(MonoTorrentClientSection.SectionName)
+            : base(ClientSection.SectionName)
         {
             this.CanPauseAndContinue = false;
             this.ServiceName = "MonoTorrent Client";
@@ -50,15 +48,26 @@ namespace MonoTorrent.ClientService
             client = new ClientEngine(defaultSettings);
             client.Listener.Stop();
             client.DhtEngine.Stop();
+
+            InitializeComponent();
         }
 
-        #region Settings
+        private void InitializeComponent()
+        {
+            // 
+            // MonoTorrentClient
+            // 
+            this.ServiceName = "MonoTorrentClient";
+
+        }
+
+        #region Configuration
 
         /// <summary>
         /// Applies the currently loaded configuration section.
         /// </summary>
-        protected override void ApplyConfiguration()
-        {			
+        protected override void OnApplyConfiguration()
+        {
             client.Settings.SavePath = Config.SavePath.ToString();
 
             if (!client.Listener.Endpoint.Equals(Config.ListenEndPoint))
@@ -74,10 +83,10 @@ namespace MonoTorrent.ClientService
         /// <summary>
         /// Propagates current settings into the configuration section.
         /// </summary>
-        protected override void CollectConfiguration()
+        protected override void OnCollectConfiguration()
         {
             Config.SavePath = new DirectoryInfo(client.Settings.SavePath);
-
+            
             Config.ListenEndPoint = client.Listener.Endpoint;
 
             Config.MaxGlobalConnections = client.Settings.GlobalMaxConnections;
@@ -94,7 +103,7 @@ namespace MonoTorrent.ClientService
             base.OnStart(args); // configuration gets loaded
 
             // TODO: Load torrents
-
+            
             client.Listener.Start();
             client.DhtEngine.Start();
         }
@@ -110,15 +119,15 @@ namespace MonoTorrent.ClientService
             base.OnStop();
         }
 
-        #region Debug methods
+        #region Debug Interface
         [Conditional("DEBUG")]
-        public void StartService()
+        public void DebugStart()
         {
             OnStart(new string[] { });
         }
 
         [Conditional("DEBUG")]
-        public void StopService()
+        public void DebugStop()
         {
             OnStop();
         }
@@ -191,7 +200,7 @@ namespace MonoTorrent.ClientService
         {
             Torrent torrent = Torrent.Load(torrentMetaData);
 
-            string torrentID = Toolbox.ToHex(torrent.InfoHash);
+            string torrentID = torrent.InfoHash.ToHex();
             
             if (savePath == null)
                 savePath = client.Settings.SavePath;
@@ -250,7 +259,7 @@ namespace MonoTorrent.ClientService
             if (!torrents.TryGetValue(torrentInfoHash, out torrent))
                 return false;
 
-            torrent.Stop().WaitOne();
+            torrent.Stop();
 
             WriteTrace("Torrent \"{0}\" stopped.", torrent.Torrent.Name);
 
@@ -269,7 +278,7 @@ namespace MonoTorrent.ClientService
             if (!torrents.TryGetValue(torrentInfoHash, out torrent))
                 return false;
 
-            torrent.Stop().WaitOne();
+            torrent.Stop();
 
             client.Unregister(torrent);
             torrents.Remove(torrentInfoHash);
@@ -287,10 +296,7 @@ namespace MonoTorrent.ClientService
         /// </summary>
         public void StopAllTorrents()
         {
-            WaitHandle[] stopHandles = client.StopAll();
-            
-            if(stopHandles.Length > 0)
-                WaitHandle.WaitAll(stopHandles);
+            client.StopAll();
         }
 
         /// <summary>
@@ -325,10 +331,10 @@ namespace MonoTorrent.ClientService
             TorrentManager torrent;
             if (!torrents.TryGetValue(torrentInfoHash, out torrent))
                 return false;
-
+            
             foreach (int i in fileIndexes)
             {
-                torrent.FileManager.Files[i].Priority = priority;
+                torrent.Torrent.Files[i].Priority = priority;
             }
 
             WriteTrace("Torrent \"{0}\" priority set to {1}.", torrent.Torrent.Name, priority);
@@ -406,6 +412,12 @@ namespace MonoTorrent.ClientService
         public IEnumerable<KeyValuePair<string, TorrentManager>> TorrentManagers
         {
             get { return torrents; }
+        }
+
+        public int MaxDownloadRate
+        {
+            get { return client.Settings.GlobalMaxDownloadSpeed; }
+            set { client.Settings.GlobalMaxDownloadSpeed = value; }
         }
         #endregion
 

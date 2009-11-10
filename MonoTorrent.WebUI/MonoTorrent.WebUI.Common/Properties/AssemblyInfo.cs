@@ -2,8 +2,8 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("MonoTorrent.ClientService")]
-[assembly: AssemblyDescription("MonoTorrent client with \u00B5Torrent's WebUI")]
+[assembly: AssemblyTitle("MonoTorrent.WebUI.Common")]
+[assembly: AssemblyDescription("Common Components for MonoTorrent with \u00B5Torrent's WebUI")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("MonoTorrent WebUI")]
@@ -12,6 +12,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCulture("")]
 
 [assembly: ComVisible(false)]
-[assembly: Guid("c1657578-ce85-4e8c-a0c8-d8c4d8e805d2")]
+[assembly: Guid("29296d4e-2721-4901-a4d7-98e7843dca2b")]
 
 [assembly: AssemblyVersion("0.2.*")]

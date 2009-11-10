@@ -1,19 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Configuration;
 using System.IO;
 using System.Net;
+using System.Text;
+using System.Configuration;
+using System.Collections.Generic;
 using MonoTorrent.Client.Encryption;
-using System.ComponentModel;
-using MonoTorrent.ClientService.Configuration.Converters;
+using MonoTorrent.WebUI.Configuration.Converters;
 
 namespace MonoTorrent.ClientService.Configuration
 {
     /// <summary>
-    /// COnfiguration for MonoTorrent client service.
+    /// Configuration for a MonoTorrent client node.
     /// </summary>
-    public class MonoTorrentClientSection : MonoTorrent.ClientService.Configuration.ConfigurationSection
+    public class ClientSection : MonoTorrent.WebUI.Configuration.ConfigurationSection
     {
         /// <summary>
         /// Default name for this configuration section.
@@ -23,7 +22,7 @@ namespace MonoTorrent.ClientService.Configuration
         /// <summary>
         /// Initializes a new instance of MonoTorrent client configuration section.
         /// </summary>
-        public MonoTorrentClientSection()
+        public ClientSection()
         {
             ConfigurationProperty savePath = new ConfigurationProperty("savePath",
                 typeof(DirectoryInfo), ".",
