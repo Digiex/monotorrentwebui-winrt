@@ -64,13 +64,15 @@
     <Compile Include="Setting.cs" />
     <Compile Include="SettingsAdapter.cs" />
     <Compile Include="Utility\WebUtil.cs" />
-    <Compile Include="HttpServerWebUI.cs" />
+    <Compile Include="HttpServer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServiceWebUI.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Utility\MimeTypes.cs" />
     <Compile Include="Utility\MultipartFormDataReader.cs" />
+    <Compile Include="Utility\XmlCachingResolver.cs" />
+    <Compile Include="Utility\XmlFileLoader.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MonoTorrent.WebUI.Common\MonoTorrent.WebUI.Common.csproj">
@@ -340,6 +342,9 @@
     <EmbeddedResource Include="ProjectInstaller.resx">
       <DependentUpon>ProjectInstaller.cs</DependentUpon>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="HttpServer.WebUI.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

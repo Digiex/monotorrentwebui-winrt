@@ -4,10 +4,12 @@ using System.Collections.Generic;
 namespace MonoTorrent.WebUI.Server.Utility
 {
     /// <summary>
-    /// Provides a mapping between file extensions and MIME types.
+    /// Provides a simple mapping between file extensions and MIME types.
     /// </summary>
     internal static class MimeTypes
     {
+        public const string Json = "application/json";
+
         private static Dictionary<string, string> extensionToMime = new Dictionary<string,string>();
 
         static MimeTypes()

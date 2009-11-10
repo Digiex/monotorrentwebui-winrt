@@ -50,12 +50,13 @@ namespace MonoTorrent.WebUI.Server
         private void InitializeSettingMappings()
         {
             //Usage:
-            //                [WebUI name]   [type of value]
-            //RegisterSetting("max_dl_rate", WebSettingType.Integer,
-            //    ()    => torrent.MaxDownloadRate,                   // [getter function]
-            //    value => torrent.MaxDownloadRate = int.Parse(value) // [setter function]
-            //    );
-            
+            /*                [WebUI name]   [type of value]
+            RegisterSetting("max_dl_rate", WebSettingType.Integer,
+                ()    => torrent.MaxDownloadRate,                   // [getter function]
+                value => torrent.MaxDownloadRate = int.Parse(value) // [setter function]
+                );
+            */
+
             RegisterSetting("torrents_start_stopped", WebSettingType.Boolean,
                 ()    => false,
                 value => bool.Parse(value)

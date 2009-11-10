@@ -46,9 +46,21 @@ namespace MonoTorrent.WebUI.Configuration
             Configuration.Save(ConfigurationSaveMode.Minimal);
         }
 
+        /// <summary>
+        /// Configuration section, available after OnStart(string[]) executed.
+        /// </summary>
+        /// <exception cref="System.InvalidOperationException">
+        /// Configuration section is only available.
+        /// </exception>
         protected TSection Config
         {
-            get { return (TSection)Configuration.GetSection(SectionName); }
+            get 
+            {
+                if (Configuration == null)
+                    throw new InvalidOperationException();
+
+                return (TSection)Configuration.GetSection(SectionName); 
+            }
         }
 
         /// <summary>
@@ -60,22 +72,6 @@ namespace MonoTorrent.WebUI.Configuration
                 Configuration = ConfigurationManager.OpenExeConfiguration(args[0]);
             else
                 Configuration = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-
-            OnConfigurationLoaded();
-        }
-
-        /// <summary>
-        /// Fires when the configuration has been loaded or the section re-read.
-        /// </summary>
-        //public event EventHandler ConfigurationLoaded;
-
-        /// <summary>
-        /// Invokes the ConfigurationLoaded event.
-        /// </summary>
-        private void OnConfigurationLoaded()
-        {
-            //if (ConfigurationLoaded != null)
-            //    ConfigurationLoaded(this, EventArgs.Empty);
         }
 
         /// <summary>
@@ -112,7 +108,8 @@ namespace MonoTorrent.WebUI.Configuration
         {
             OnCollectConfiguration();
 
-            Configuration.Save();
+            SaveConfiguration();
+            Configuration = null;
 
             base.OnShutdown();
         } 

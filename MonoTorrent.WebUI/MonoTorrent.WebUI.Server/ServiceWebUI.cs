@@ -109,7 +109,10 @@ namespace MonoTorrent.WebUI.Server
         protected override void Dispose(bool disposing)
         {
             if (disposing)
-                httpServer.Dispose();
+            {
+                if(httpServer != null)
+                    httpServer.Dispose();
+            }
 
             base.Dispose(disposing);
         }

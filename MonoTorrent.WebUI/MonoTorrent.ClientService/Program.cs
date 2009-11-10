@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using MonoTorrent.WebUI.Server;
 using MonoTorrent.WebUI.Server.Configuration;
+using System.ServiceProcess;
 
 namespace MonoTorrent.ClientService
 {
@@ -12,21 +13,19 @@ namespace MonoTorrent.ClientService
         /// </summary>
         static void Main()
         {
-            //MonoTorrentClient service = new MonoTorrentClient();
-            //ClientWebUI webUI = new ClientWebUI(service);
-            //ServiceBase[] servicesToRun = new ServiceBase[] { service, webUI };
+            MonoTorrentClient monoTorrent = new MonoTorrentClient();
+            ServiceWebUI webUI = new ServiceWebUI(monoTorrent);
+
+            //ServiceBase[] servicesToRun = new ServiceBase[] { monoTorrent, webUI };
             //ServiceBase.Run(servicesToRun);
 
-			RunConsole();
+            RunConsole(monoTorrent, webUI);
         }
 
         [Conditional("DEBUG")]
-		static void RunConsole()
+        static void RunConsole(MonoTorrentClient monoTorrent, ServiceWebUI webUI)
 		{
             InitTrace();
-
-            MonoTorrentClient monoTorrent = new MonoTorrentClient();
-            ServiceWebUI webUI = new ServiceWebUI(monoTorrent);
 
             Trace.WriteLine("Starting MonoTorrent engine...");
             monoTorrent.DebugStart();
