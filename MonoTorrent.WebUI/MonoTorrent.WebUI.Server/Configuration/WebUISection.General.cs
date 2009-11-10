@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Configuration;
-using System.Security.Cryptography;
-using System.Text;
+using MonoTorrent.WebUI.Server.Utility;
 
 namespace MonoTorrent.WebUI.Server.Configuration
 {
@@ -10,16 +9,8 @@ namespace MonoTorrent.WebUI.Server.Configuration
     /// </summary>
     public partial class WebUISection
     {
-        /// <summary>
-        /// Hash algorithm instance. (Used for hashing passwords.)
-        /// </summary>
-        private HashAlgorithm hashAlg;
-
         private void InitializeGeneralProperties()
         {
-            // Following properties require custom converters which cannot be declared
-            // using attributes hence they are declared like so:
-
             ConfigurationProperty adminPass = new ConfigurationProperty("adminPass",
                 typeof(string), null,
                 ConfigurationPropertyOptions.None
@@ -43,28 +34,25 @@ namespace MonoTorrent.WebUI.Server.Configuration
         /// <param name="clearPassword"></param>
         public void SetAdminPassword(string clearPassword)
         {
-            byte[] passwBytes = Encoding.Default.GetBytes(clearPassword);
-            byte[] passwHash = hashAlg.ComputeHash(passwBytes);
-
-            throw new NotImplementedException();
-            //this["adminPass"] = MonoTorrent.Common.Toolbox.ToHex(passwHash);
+            this["adminPass"] = PasswordHelper.ToStorageFormat(clearPassword, HashAlgorithmName);
         }
 
         /// <summary>
-        /// Determines if the <paramref name="candidate"/> matches the original password.
+        /// Determines if the <paramref name="candidate"/> matches the set password.
         /// </summary>
         /// <param name="candidate">Candidate password supplied by user.</param>
         /// <returns>True if the two match, false otherwise.</returns>
         public bool MatchAdminPassword(string candidate)
         {
-            byte[] candBytes = Encoding.Default.GetBytes(candidate);
-            byte[] candHash = hashAlg.ComputeHash(candBytes);
+            if (String.IsNullOrEmpty(candidate))
+                return false;
 
-            throw new NotImplementedException();
-            //string candHex = MonoTorrent.Common.Toolbox.ToHex(candHash);
-            //string passHex = (string)this["adminPass"];
+            string adminPassHash = (string)this["adminPass"];
 
-            //return String.Equals(candHex, passHex, StringComparison.InvariantCultureIgnoreCase);
+            if (String.IsNullOrEmpty(adminPassHash))
+                return false;
+
+            return PasswordHelper.IsPasswordMatch(candidate, adminPassHash);
         }
 
         /// <summary>
@@ -91,17 +79,11 @@ namespace MonoTorrent.WebUI.Server.Configuration
         /// Hash algorithm used to hash passwords (for storage).
         /// </summary>
         [ConfigurationProperty("hashAlgorithm", DefaultValue = "SHA1", IsRequired = false)]
+        [CallbackValidator(CallbackMethodName = "HashAlgorithmNameValidator", Type = typeof(PasswordHelper))]
         public string HashAlgorithmName
         {
             get { return (string)this["hashAlgorithm"]; }
-            set { this["hashAlgorithm"] = value; OnPropertyChanged("GuestAccount"); }
-        }
-
-        protected override void PostDeserialize()
-        {
-            hashAlg = HashAlgorithm.Create(HashAlgorithmName);
-
-            base.PostDeserialize();
+            set { this["hashAlgorithm"] = value;  OnPropertyChanged("GuestAccount"); }
         }
     }
 }
