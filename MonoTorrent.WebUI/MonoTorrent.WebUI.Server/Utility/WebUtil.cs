@@ -205,7 +205,7 @@ namespace MonoTorrent.WebUI.Server.Utility
             return list.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
         }
 
-        private static readonly Regex cookieSplit = new Regex("^(?<url>.*):COOKIE:(?<cookies>(([^=]*=?([^;]*|;|$)))*)", RegexOptions.Compiled);
+        private static readonly Regex cookieSplit = new Regex("^(?<url>.*)(:COOKIE:(?<cookies>(([^=]*=?([^;]*|;|$)))*))?", RegexOptions.Compiled);
         private static readonly Regex cookieParse = new Regex("^(?<key>[^=]+)(=(?<value>[^;]*))?$", RegexOptions.Compiled);
 
         public static void ParseCookieSuffix(string url, out Uri uri, out List<Cookie> cookies)
