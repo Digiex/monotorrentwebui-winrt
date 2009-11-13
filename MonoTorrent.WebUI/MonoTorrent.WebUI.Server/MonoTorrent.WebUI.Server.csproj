@@ -52,9 +52,8 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Configuration\WebUISection.cs" />
     <Compile Include="Configuration\WebUISection.General.cs" />
-    <Compile Include="Configuration\WebUISection.Server.cs" />
+    <Compile Include="Configuration\HttpServerSection.cs" />
     <Compile Include="ProjectInstaller.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -341,6 +340,9 @@
   <ItemGroup>
     <Compile Include="HttpServer.WebUI.cs" />
     <Compile Include="Utility\PasswordHelper.cs" />
+    <Compile Include="Utility\WebClientExt.cs">
+      <SubType>Component</SubType>
+    </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

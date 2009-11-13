@@ -15,7 +15,8 @@ namespace MonoTorrent.WebUI.Server
 	/// <summary>
 	/// HTTP server that handles WebUI queries.
 	/// </summary>
-    public partial class HttpServerWebUI : IDisposable
+    public class HttpServer<TConfig> : IDisposable
+        where TConfig : HttpServerSection
 	{
         /// <summary>
         /// This is the webserver.
@@ -33,13 +34,39 @@ namespace MonoTorrent.WebUI.Server
         public Encoding ResponseEncoding
         {
             get;
-            internal set;
+            private set;
+        }
+
+        /// <summary>
+        /// WebUI root directory.
+        /// </summary>
+        public DirectoryInfo WebSiteRoot
+        {
+            get;
+            private set;
+        }
+
+        /// <summary>
+        /// True if the server is listening, false otherwise.
+        /// </summary>
+        public bool IsRunning
+        {
+            get { return httpListener.IsListening; }
+        }
+
+        /// <summary>
+        /// Base URL of the website, derived from the HTTP listener prefix. (e.g. /gui/)
+        /// </summary>
+        public string WebSiteUrlBase
+        {
+            get;
+            private set;
         }
 
         /// <summary>
         /// Initializes a WebUI HTTP server.
         /// </summary>
-        public HttpServerWebUI()
+        public HttpServer()
         {
             this.httpListener = new HttpListener();
             this.httpListener.AuthenticationSchemeSelectorDelegate = SelectAuthScheme;
@@ -47,8 +74,7 @@ namespace MonoTorrent.WebUI.Server
             this.listenWorker = new Thread(ListenLoop);
             this.listenWorker.Name = "HTTP Listener Thread";
 
-            BuildNumber = this.GetType().Assembly.GetName().Version.Build;
-            ResponseEncoding = Encoding.UTF8;
+            ResponseEncoding = Encoding.Default;
         }
 
         #region State Control API
@@ -58,28 +84,31 @@ namespace MonoTorrent.WebUI.Server
         /// <param name="listenerPrefix">HTTP Listener prefix, see <see cref="System.Net.HttpListener"/>.</param>
         /// <param name="dirWebUI">Directory containing WebUI files.</param>
         /// <param name="settingsAdapter">SettingsAdapter instance.</param>
-        public void StartHttpServer(ITorrentController torrents, WebUISection config)
+        public void StartHttpServer(TConfig config)
         {
-            if (torrents == null)
-                throw new ArgumentNullException("torrents");
-
-            if (config == null)
-                throw new ArgumentNullException("config");
-
             if (httpListener.IsListening)
                 throw new InvalidOperationException("Server is currently running.");
-
-            this.DirWebUI = config.DirWebUI;
-            this.settingsAdapter = new SettingsAdapter(config, torrents);
-            this.torrents = torrents;
+            
+            if (config == null)
+                throw new ArgumentNullException("config");
+            
+            this.WebSiteRoot = config.WebSiteRoot;
+            this.ResponseEncoding = config.ResponseEncoding;
+            this.WebSiteUrlBase = config.HttpListenerPath;
 
             httpListener.Prefixes.Clear();
             httpListener.Prefixes.Add(config.HttpListenerPrefix);
 
             stopFlag = false;
 
+            OnStartServer(config);
+
             httpListener.Start();
             listenWorker.Start();
+        }
+
+        protected virtual void OnStartServer(TConfig config)
+        {
         }
 
         /// <summary>
@@ -89,6 +118,8 @@ namespace MonoTorrent.WebUI.Server
         {
             if (!httpListener.IsListening)
                 return;
+
+            OnStopServer();
 
             stopFlag = true;
             httpListener.Stop();
@@ -100,9 +131,10 @@ namespace MonoTorrent.WebUI.Server
                 httpListener.Abort(); // drop all incoming request and shutdown
                 listenWorker.Join();
             }
+        }
 
-            this.settingsAdapter = null;
-            this.torrents = null;
+        protected virtual void OnStopServer()
+        {
         }
         #endregion
 
@@ -188,29 +220,26 @@ namespace MonoTorrent.WebUI.Server
         #endregion
 
         #region Request Marshalling
-        private static readonly Regex queryUrl = new Regex("^/gui/[?]", RegexOptions.Compiled);
-        private static readonly Regex fileUrl = new Regex("^/gui/", RegexOptions.Compiled);
-
         /// <summary>
         /// Dispatches the request to the appropriate handler based on the URL
         /// </summary>
         private void MarshalRequest(HttpListenerContext context)
         {
-            if (RedirectToCanonicalUrl(context))
-                return; // request redirected from /gui... to /gui/...
-
-            if (queryUrl.IsMatch(context.Request.RawUrl))
-                ProcessQueryRequest(context); // /gui/some/path?token=...&action=...&hash=...
-            else if (fileUrl.IsMatch(context.Request.RawUrl))
-                ProcessFileRequest(context); // /gui/some/file.ext
+            if (HandleRequest(context))
+                return;
             else
-                ProcessBadRequest(context, "We don't serve that here!");
+                ProcessFileRequest(context);
+        }
+
+        protected virtual bool HandleRequest(HttpListenerContext context)
+        {
+            return false;
         }
 
         /// <summary>
         /// Writes a message as the response.
         /// </summary>
-        private void Respond(HttpListenerContext context, HttpStatusCode httpStatusCode, string message)
+        protected void Respond(HttpListenerContext context, HttpStatusCode httpStatusCode, string message)
         {
             context.Response.StatusCode = (int)httpStatusCode;
             context.Response.ContentEncoding = ResponseEncoding;
@@ -223,84 +252,70 @@ namespace MonoTorrent.WebUI.Server
         /// <summary>
         /// Responds with HTTP 400 and the specified message.
         /// </summary>
-        private void ProcessBadRequest(HttpListenerContext context, string message)
+        protected void ProcessBadRequest(HttpListenerContext context, string message)
         {
             Respond(context, HttpStatusCode.BadRequest, message);
         }
-
-        /// <summary>
-        /// Checks for a missing trailing slash, redirects accordingly.
-        /// </summary>
-        private bool RedirectToCanonicalUrl(HttpListenerContext context)
+        
+        protected void RespondForbidden(HttpListenerContext context)
         {
-            if (Regex.IsMatch(context.Request.RawUrl, "^/gui([?].*)?$"))
-            {
-                // client requested /gui  or /gui?<query>
-                // it should be     /gui/ or /gui/?<query>
-
-                string fixedUrl = context.Request.RawUrl.Insert("/gui".Length, "/");
-
-                context.Response.StatusCode = (int)HttpStatusCode.MovedPermanently;
-                context.Response.Redirect(fixedUrl);
-
-                return true;
-            }
-            else
-                return false;
-        } 
+            Respond(context, HttpStatusCode.Forbidden, "Access denied.");
+        }
         #endregion
 
         #region Static File Requests
-        #region Constants
-        private const string IndexFile = "index.html";
-        private const string TokenFile = "token.html";
-        #endregion
-
         /// <summary>
         /// Writes the file specified in the request URL into the response stream.
         /// </summary>
-        private void ProcessFileRequest(HttpListenerContext context)
+        protected virtual void ProcessFileRequest(HttpListenerContext context)
         {
-            string filePath = context.Request.Url.AbsolutePath.Substring("/gui/".Length);
+            string filePath = GetServerFilePath(context);
 
-            if (filePath.Length == 0)
-                filePath = IndexFile;
-
-            filePath = Path.Combine(DirWebUI.FullName, filePath);
-
-            string fileName = Path.GetFileName(filePath);
-            switch (fileName)
+            try
             {
-                case IndexFile:
-                    ServeIndexFile(context, filePath);
-                    break;
-
-                case TokenFile:
-                    ServeTokenRequest(context);
-                    break;
-
-                default:
-                    ServeFile(context, filePath);
-                    break;
+                ServeFile(context, filePath);
             }
+            catch (FileNotFoundException)
+            {
+                RespondFileNotFound(context);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                RespondFileNotFound(context);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                RespondForbidden(context);
+            }
+        }
+
+        protected string GetWebSitePath(HttpListenerContext context)
+        {
+            Debug.Assert(context.Request.Url.AbsolutePath.StartsWith(WebSiteUrlBase));
+
+            string url = context.Request.Url.AbsolutePath.Substring(WebSiteUrlBase.Length);
+            
+            return url;
+        }
+
+        protected string GetServerFilePath(HttpListenerContext context)
+        {
+            return Path.Combine(
+                WebSiteRoot.FullName,
+                GetWebSitePath(context)
+                );
         }
 
         /// <summary>
         /// Serves a file from the WebUI directory or a 404 message.
         /// </summary>
-        private void ServeFile(HttpListenerContext context, string path)
+        protected void ServeFile(HttpListenerContext context, string path)
         {
-            if (!File.Exists(path))
-            {
-                RespondFileNotFound(context);
-                return;
-            }
-
-            string ext = Path.GetExtension(path);
-            context.Response.ContentType = MimeTypes.ExtensionLookup(ext);
-
             using (FileStream data = File.OpenRead(path))
             {
+                string ext = Path.GetExtension(path);
+                context.Response.ContentType = MimeTypes.ExtensionLookup(ext);
+
                 if (data.CanSeek)
                     context.Response.ContentLength64 = data.Length;
 
@@ -320,56 +335,16 @@ namespace MonoTorrent.WebUI.Server
         /// Send a "404 Not Found" response.
         /// </summary>
         /// <param name="context"></param>
-        private void RespondFileNotFound(HttpListenerContext context)
+        protected void RespondFileNotFound(HttpListenerContext context)
         {
             Respond(context, HttpStatusCode.NotFound, "404 Not Found.");
         }
-
-        /// <summary>
-        /// Answers with a token number.
-        /// </summary>
-        private void ServeTokenRequest(HttpListenerContext context)
-        {
-            const string tokenTemplate =
-                "<html>" +
-                "<head>" +
-                "   <title>Token Response</title>" +
-                "</head>" +
-                "<body>" +
-                "   <div id='token' style='display:none;'>{0}</div>" +
-                "</body>" +
-                "</html>";
-
-            Guid token = Guid.NewGuid();
-            string answer = String.Format(tokenTemplate, Guid.NewGuid());
-
-            context.Response.ContentType = "text/html";
-            Respond(context, HttpStatusCode.OK, answer);
-        }
-
-        /// <summary>
-        /// Serves the WebUI index file.
-        /// </summary>
-        private void ServeIndexFile(HttpListenerContext context, string filePath)
-        {
-            XmlDocument indexDocument = XmlFileLoader.LoadXmlDocument(filePath);
-            XmlNode tokenNode = indexDocument.SelectSingleNode("//node()[@id='token']");
-
-            if (tokenNode != null)
-                tokenNode.InnerText = new Random().Next(100000000,999999999).ToString();
-
-            context.Response.ContentType = System.Net.Mime.MediaTypeNames.Text.Html;
-            using (XmlWriter writer = new XmlTextWriter(context.Response.OutputStream, ResponseEncoding))
-            {
-                indexDocument.WriteTo(writer);
-            }
-        } 
         #endregion
         #endregion
         
         #region Trace Helpers
         [Conditional("TRACE")]
-        private static void TraceHttpRequest(HttpListenerContext context)
+        protected static void TraceHttpRequest(HttpListenerContext context)
         {
             TraceWriteLine("HttpListenerRequest");
             TraceWriteLine("{");
@@ -401,7 +376,7 @@ namespace MonoTorrent.WebUI.Server
         }
 
         [Conditional("TRACE")]
-        private static void TraceHttpResponse(HttpListenerContext context)
+        protected static void TraceHttpResponse(HttpListenerContext context)
         {
             TraceWriteLine("HttpListenerResponse");
             TraceWriteLine("{");
@@ -430,13 +405,13 @@ namespace MonoTorrent.WebUI.Server
         }
 
         [Conditional("TRACE")]
-        private static void TraceWriteLine(string message)
+        protected static void TraceWriteLine(string message)
         {
             Trace.WriteLine(message);
         }
 
         [Conditional("TRACE")]
-        private static void TraceWriteLine(string format, params object[] args)
+        protected static void TraceWriteLine(string format, params object[] args)
         {
             Trace.WriteLine(String.Format(format, args));
         }

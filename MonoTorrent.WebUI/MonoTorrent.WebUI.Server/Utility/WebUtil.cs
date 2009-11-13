@@ -208,7 +208,13 @@ namespace MonoTorrent.WebUI.Server.Utility
         private static readonly Regex cookieSplit = new Regex("^(?<url>.*)(:COOKIE:(?<cookies>(([^=]*=?([^;]*|;|$)))*))?", RegexOptions.Compiled);
         private static readonly Regex cookieParse = new Regex("^(?<key>[^=]+)(=(?<value>[^;]*))?$", RegexOptions.Compiled);
 
-        public static void ParseCookieSuffix(string url, out Uri uri, out List<Cookie> cookies)
+        /// <summary>
+        /// Parses uTorrent's COOKIE query string parameter "http://host/path/:COOKIE:c1=v2;c2=v2..."
+        /// </summary>
+        /// <param name="url">Raw URL of the torrent string.</param>
+        /// <param name="uri">URL without the COOKIE suffix.</param>
+        /// <param name="cookies">List of parsed cookies.</param>
+        private static void ParseCookieSuffix(string url, out Uri uri, out List<Cookie> cookies)
         {
             // Match url http://some-tracker.com/torrent/12345:COOKIE:abc=123;xyz=789
             Match match = cookieSplit.Match(url);
@@ -224,69 +230,96 @@ namespace MonoTorrent.WebUI.Server.Utility
             string rawCookies = match.Result("${cookies}");
 
             cookies = new List<Cookie>();
-            foreach (string rawCookie in rawCookies.Split(";".ToCharArray(), StringSplitOptions.RemoveEmptyEntries))
+            string[] rawCookieList = rawCookies.Split(
+                new char[] { ';' }, 
+                StringSplitOptions.RemoveEmptyEntries
+                );
+            foreach (string rawCookie in rawCookieList)
             {
-                Match matchCookie = cookieParse.Match(rawCookie);
+                var cookie = ParseQueryPair(rawCookie);
 
-                string key = matchCookie.Result("${key}");
-                string value = matchCookie.Result("${value}");
-                cookies.Add(new Cookie(key, value));
+                cookies.Add(new Cookie(cookie.Key, cookie.Value));
             }
         }
 
-        public static Stream FetchUrlWithCookies(string url, int maxSize)
+        /// <summary>
+        /// Fetches URL after parsing out uTorrent style cookies suffix.
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="maxSize">Maximum download size</param>
+        public static byte[] FetchUrlWithCookies(string url, int maxSize)
         {
             Uri uri;
             List<Cookie> cookies;
-            WebUtil.ParseCookieSuffix(url, out uri, out cookies);
+            ParseCookieSuffix(url, out uri, out cookies);
 
-            HttpWebRequest req = WebRequest.Create(uri) as HttpWebRequest;
-
-            if (req == null)
-                throw new NotSupportedException("Torrents may only be fetched from HTTP URIs.");
-
+            WebClientExt web = new WebClientExt();
+            web.MaxDownloadSize = 524288; // 512KB
             if (cookies != null)
             {
-                req.CookieContainer = new CookieContainer();
+                web.CookieContainer = new CookieContainer();
 
                 foreach (var cookie in cookies)
-                    req.CookieContainer.Add(uri, cookie);
+                    web.CookieContainer.Add(uri, cookie);
             }
-
-            using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
-            {
-                return ReadResponse(resp, maxSize);
-            }
+            
+            return web.DownloadData(uri);
         }
 
-        private static Stream ReadResponse(HttpWebResponse resp, int maxSize)
+        public static IEnumerable<KeyValuePair<string, KeyValueBag>> ParsePropertyChanges(string queryString)
         {
-            int bufferSize = Math.Max((int)resp.ContentLength, 102400); // min 100KB
+            string[] parts = queryString.Split(new char[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
 
-            MemoryStream bufferStream = new MemoryStream(bufferSize);
-            using (Stream input = resp.GetResponseStream())
+            return WalkQueryParts(parts);
+        }
+
+        private static IEnumerable<KeyValuePair<string, KeyValueBag>> WalkQueryParts(IEnumerable<string> parts)
+        {
+            IEnumerator<string> cursor = parts.GetEnumerator();
+            
+            if (!cursor.MoveNext())
+                yield break;
+
+            do
             {
-                byte[] buffer = new byte[1024];
-                int count;
-                long total = 0;
+                var pair = ParseQueryPair(cursor.Current);
 
-                while ((count = input.Read(buffer, 0, buffer.Length)) > 0)
+                if (pair.Key == "hash")
                 {
-                    bufferStream.Write(buffer, 0, count);
-                    total += count;
+                    KeyValueBag bag = YieldHashPairs(cursor);
 
-                    if (total > maxSize)
-                        throw new ApplicationException("Torrent file size is too large.");
+                    yield return new KeyValuePair<string, KeyValueBag>(pair.Value, bag);
                 }
             }
-
-            bufferStream.Seek(0, SeekOrigin.Begin);
-            return bufferStream;
+            while (cursor.MoveNext());
         }
 
-        public static IEnumerable<KeyValuePair<string, KeyValueBag>> ParsePropChanges(HttpListenerRequest Request)
+        private static KeyValueBag YieldHashPairs(IEnumerator<string> cursor)
         {
-            throw new NotImplementedException();
+            while (cursor.MoveNext())
+            {
+                var pair = ParseQueryPair(cursor.Current);
+
+                if (pair.Key == "hash")
+                    yield break;
+                else
+                    yield return pair;
+            }
+        }
+
+        private static KeyValuePair<string, string> ParseQueryPair(string input)
+        {
+            string[] parts = input.Split('=');
+
+            string key = null;
+            string value = null;
+
+            key = parts[0];
+
+            if (parts.Length == 2)
+                value = parts[1];
+
+            return new KeyValuePair<string, string>(key, value);
         }
 
         public static bool TestBooleanField(HttpListenerRequest Request, string field)

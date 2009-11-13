@@ -9,6 +9,7 @@ namespace MonoTorrent.WebUI.Server.Utility
     internal static class MimeTypes
     {
         public const string Json = "application/json";
+        public const string Unknown = "application/unknown";
 
         private static Dictionary<string, string> extensionToMime = new Dictionary<string,string>();
 
@@ -108,7 +109,7 @@ namespace MonoTorrent.WebUI.Server.Utility
             if (extensionToMime.TryGetValue(extension, out mimeType))
                 return mimeType;
             else
-                return "application/unknown";
+                return MimeTypes.Unknown;
         }
     }
 }

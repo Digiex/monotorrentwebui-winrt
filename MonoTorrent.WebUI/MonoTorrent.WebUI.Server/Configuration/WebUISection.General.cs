@@ -7,15 +7,30 @@ namespace MonoTorrent.WebUI.Server.Configuration
     /// <summary>
     /// Configuration for a WebUI server.
     /// </summary>
-    public partial class WebUISection
+    public class WebUISection : HttpServerSection
     {
-        private void InitializeGeneralProperties()
+        /// <summary>
+        /// Default name for this configuration section.
+        /// </summary>
+        public const string SectionName = "WebUI";
+
+        public WebUISection() : base()
         {
             ConfigurationProperty adminPass = new ConfigurationProperty("adminPass",
                 typeof(string), null,
                 ConfigurationPropertyOptions.None
                 );
             Properties.Add(adminPass);
+        }
+
+        /// <summary>
+        /// Build number to report to WebUI.
+        /// </summary>
+        [ConfigurationProperty("build", DefaultValue = -1, IsRequired = false)]
+        public int BuildNumber
+        {
+            get { return (int)this["build"]; }
+            //set { this["build"] = value; OnPropertyChanged("BuildNumber"); }
         }
 
         /// <summary>
@@ -84,6 +99,14 @@ namespace MonoTorrent.WebUI.Server.Configuration
         {
             get { return (string)this["hashAlgorithm"]; }
             set { this["hashAlgorithm"] = value;  OnPropertyChanged("GuestAccount"); }
+        }
+
+        private static RegexStringValidator listenerValidator = new RegexStringValidator(
+            @"^https?://(" + IPRegex + "|" + DNSRegex + "|[+]|[*])(:[0-9]{1,5})?/gui/$"
+            );
+        protected override ConfigurationValidatorBase HttpListenerValidator
+        {
+            get { return listenerValidator; }
         }
     }
 }

@@ -169,7 +169,7 @@ namespace MonoTorrent.ClientService
             return mgr;
         }
 
-        public TorrentManager AddTorrent(Stream torrentMetaData, string savePath, string baseDirectory)
+        public TorrentManager AddTorrent(byte[] torrentMetaData, string savePath, string baseDirectory)
         {
             return AddTorrent(torrentMetaData, savePath, baseDirectory,
                 Config.DefaultUploadSlots,
@@ -191,7 +191,7 @@ namespace MonoTorrent.ClientService
         /// <param name="maxUploadSpeed">The maximum upload speed for this torrent.</param>
         /// <param name="initialSeedingEnabled">True to enable "super-seeding".</param>
         /// <returns>TorrentManager responsible for the torrent.</returns>
-        public TorrentManager AddTorrent(Stream torrentMetaData, string savePath, string baseDirectory, 
+        public TorrentManager AddTorrent(byte[] torrentMetaData, string savePath, string baseDirectory, 
             int uploadSlots, 
             int maxConnections, 
             int maxDownloadSpeed, 
@@ -287,6 +287,22 @@ namespace MonoTorrent.ClientService
             //    Directory.Delete(torrent.SavePath);
             
             WriteTrace("Torrent \"{0}\" removed.", torrent.Torrent.Name);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Recheck the specified torrent's data.
+        /// </summary>
+        /// <param name="torrentInfoHash">Identifier of the torrent.</param>
+        /// <returns>False when <paramref name="torrentInfoHash"/> is not registered, otherwise true.</returns>
+        public bool RecheckTorrentData(string torrentInfoHash)
+        {
+            TorrentManager torrent;
+            if (!torrents.TryGetValue(torrentInfoHash, out torrent))
+                return false;
+
+            torrent.HashCheck(true);
 
             return true;
         }

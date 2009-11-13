@@ -9,13 +9,16 @@ using MonoTorrent.WebUI.Server.Utility;
 using Newtonsoft.Json;
 // enumerable of (string:string) pairs
 using KeyValueBag = System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, string>>;
+using MonoTorrent.WebUI.Server.Configuration;
+using System.Text.RegularExpressions;
+using System.Xml;
 
 namespace MonoTorrent.WebUI.Server
 {
     /// <summary>
     /// This portion of the class keeps WebUI query handling logic.
     /// </summary>
-	partial class HttpServerWebUI
+	class WebUIServer : HttpServer<WebUISection>
 	{
         /// <summary>
         /// Maps configuration between WebUI and MonoTorrent.
@@ -25,16 +28,7 @@ namespace MonoTorrent.WebUI.Server
         /// <summary>
         /// Reference to the MonoTorrent engine.
         /// </summary>
-        private ITorrentController torrents;
-
-        /// <summary>
-        /// WebUI root directory.
-        /// </summary>
-        public DirectoryInfo DirWebUI
-        {
-            get;
-            private set;
-        }
+        public ITorrentController torrents;
 
         /// <summary>
         /// Build number reported to WebUI.
@@ -42,10 +36,158 @@ namespace MonoTorrent.WebUI.Server
         public int BuildNumber
         {
             get;
-            internal set;
+            private set;
         }
 
-        #region Query Processing
+        /// <summary>
+        /// Creates a WebUI server.
+        /// </summary>
+        public WebUIServer(ITorrentController torrents) : base()
+        {
+            if (torrents == null)
+                throw new ArgumentNullException("torrents");
+
+            this.torrents = torrents;
+
+            BuildNumber = this.GetType().Assembly.GetName().Version.Build;
+        }
+
+        protected override void OnStartServer(WebUISection config)
+        {
+            this.BuildNumber = config.BuildNumber;
+
+            this.settingsAdapter = new SettingsAdapter(config, torrents);
+        }
+
+        protected override void OnStopServer()
+        {
+            this.settingsAdapter = null;
+        }
+
+        #region Request Processing
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        protected override bool HandleRequest(HttpListenerContext context)
+        {
+            if (RedirectToCanonicalUrl(context))
+                return true;
+
+            if (String.IsNullOrEmpty(context.Request.Url.Query))
+            {
+                return false;
+            }
+            else
+            {
+                ProcessQueryRequest(context);
+                return true;
+            }
+        }
+
+        #region Constants
+        private const string IndexFile = "index.html";
+        private const string TokenFile = "token.html";
+        #endregion
+
+        /// <summary>
+        /// Reconnizes 
+        /// </summary>
+        /// <param name="context"></param>
+        protected override void ProcessFileRequest(HttpListenerContext context)
+        {
+            string sitePath = GetWebSitePath(context);
+            string filePath;
+            
+            if (sitePath.Length == 0)
+                filePath = Path.Combine(WebSiteRoot.FullName, IndexFile);
+            else
+                filePath = GetServerFilePath(context);
+
+            string fileName = Path.GetFileName(filePath);
+            switch (fileName)
+            {
+                case IndexFile:
+                    ServeIndexFile(context, filePath);
+                    break;
+
+                case TokenFile:
+                    ServeTokenRequest(context);
+                    break;
+
+                default:
+                    base.ProcessFileRequest(context);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Answers with a token number.
+        /// </summary>
+        private void ServeTokenRequest(HttpListenerContext context)
+        {
+            const string tokenTemplate =
+                "<html>" +
+                "<head>" +
+                "   <title>Token Response</title>" +
+                "</head>" +
+                "<body>" +
+                "   <div id='token' style='display:none;'>{0}</div>" +
+                "</body>" +
+                "</html>";
+
+            Guid token = Guid.NewGuid();
+            string answer = String.Format(tokenTemplate, Guid.NewGuid());
+
+            context.Response.ContentType = "text/html";
+            Respond(context, HttpStatusCode.OK, answer);
+        }
+
+        /// <summary>
+        /// Serves the WebUI index file.
+        /// </summary>
+        private void ServeIndexFile(HttpListenerContext context, string filePath)
+        {
+            XmlDocument indexDocument = XmlFileLoader.LoadXmlDocument(filePath);
+            XmlNode tokenNode = indexDocument.SelectSingleNode("//node()[@id='token']");
+
+            if (tokenNode != null)
+                tokenNode.InnerText = new Random().Next(100000000, 999999999).ToString();
+
+            string ext = Path.GetExtension(filePath);
+            context.Response.ContentType = MimeTypes.ExtensionLookup(ext);
+            using (XmlWriter writer = new XmlTextWriter(context.Response.OutputStream, ResponseEncoding))
+            {
+                indexDocument.WriteTo(writer);
+            }
+        }
+
+        private static readonly Regex nonCanonicalUrl = new Regex("^/gui([?])?$", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Redirects URL requests with missing slashes
+        /// </summary>
+        private bool RedirectToCanonicalUrl(HttpListenerContext context)
+        {
+            // redirects /gui  or /gui?<query>
+            // to        /gui/ or /gui/?<query>
+
+            if (nonCanonicalUrl.IsMatch(context.Request.RawUrl))
+            {
+                string fixedUrl = context.Request.RawUrl.Insert("/gui".Length, "/");
+
+                context.Response.StatusCode = (int)HttpStatusCode.MovedPermanently;
+                context.Response.Redirect(fixedUrl);
+
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        } 
+
         /// <summary>
         /// Processes "http://host:port/gui/?..." requests, this is where WebUI logic is.
         /// </summary>
@@ -67,23 +209,27 @@ namespace MonoTorrent.WebUI.Server
 
                 try
                 {
-                    AnswerQueryRequest(context, json);
+                    AnswerQuery(context, json);
                 }
                 catch (ApplicationException ex)
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    json.WritePropertyName("error");
-                    json.WriteValue("Error: " + ex.Message);
+                    PrintError(json, ex);
                 }
                 catch (Exception ex)
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                    json.WritePropertyName("error");
-                    json.WriteValue("Error: " + ex.Message);
+                    PrintError(json, ex);
                 }
 
                 json.WriteEndObject();
             }
+        }
+
+        private static void PrintError(JsonWriter json, Exception ex)
+        {
+            json.WritePropertyName("error");
+            json.WriteValue("Error: " + ex.Message);
         }
 
         /// <summary>
@@ -110,7 +256,7 @@ namespace MonoTorrent.WebUI.Server
         /// <summary>
         /// Handles /gui/?action=ACTION_NAME&... queries
         /// </summary>
-        private void AnswerQueryRequest(HttpListenerContext context, JsonWriter json)
+        private void AnswerQuery(HttpListenerContext context, JsonWriter json)
         {
             HttpListenerRequest Request = context.Request;
             HttpListenerResponse Response = context.Response;
@@ -137,7 +283,7 @@ namespace MonoTorrent.WebUI.Server
                     PrintProperties(json, hashes);
                     break;
                 case "setprops":
-                    var parameters = WebUtil.ParsePropChanges(Request);
+                    var parameters = WebUtil.ParsePropertyChanges(Request.Url.Query);
                     SetTorrentProperties(parameters);
                     break;
 
@@ -499,7 +645,8 @@ namespace MonoTorrent.WebUI.Server
         /// </summary>
         private void RecheckTorrents(string[] hashes)
         {
-            throw new NotImplementedException();
+            foreach(string hash in hashes)
+                torrents.RecheckTorrentData(hash);
         }
 
         /// <summary>
@@ -508,7 +655,10 @@ namespace MonoTorrent.WebUI.Server
         private void AddTorrentFromUpload(HttpListenerRequest request)
         {
             if (request.HttpMethod != "POST")
-                throw new ApplicationException("Torrent must be uploaded through HTTP POST requests.");
+                throw new ApplicationException("Uploads must use HTTP POST requests.");
+
+            if (!request.HasEntityBody)
+                throw new ApplicationException("File was not included int the request.");
 
             throw new NotImplementedException(
                 "File uploads are not yet supported by this server. Please use URL fetcher."
@@ -548,7 +698,7 @@ namespace MonoTorrent.WebUI.Server
         /// </summary>
         private void AddTorrentFromUrl(string url)
         {
-            Stream data = WebUtil.FetchUrlWithCookies(url, 1048576);
+            byte[] data = WebUtil.FetchUrlWithCookies(url, 1048576);
 
             torrents.AddTorrent(data, null, null);
         }

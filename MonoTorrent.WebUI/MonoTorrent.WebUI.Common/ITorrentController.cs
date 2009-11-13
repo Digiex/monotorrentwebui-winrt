@@ -14,7 +14,7 @@ namespace MonoTorrent.WebUI.Common
         /// <summary>
         /// Register the torrent with the MonoTorrent engine.
         /// </summary>
-        /// <param name="torrentMetaData">Stream containing the .torrent file.</param>
+        /// <param name="torrentMetaData">Contents of a .torrent file.</param>
         /// <param name="savePath">Directory where to save the torrent.</param>
         /// <param name="baseDirectory">Directory name for multi-file torrents or file name of the torrent.</param>
         /// <param name="uploadSlots">The maximum number of upload slots for this torrent.</param>
@@ -23,7 +23,7 @@ namespace MonoTorrent.WebUI.Common
         /// <param name="maxUploadSpeed">The maximum upload speed for this torrent.</param>
         /// <param name="initialSeedingEnabled">True to enable "super-seeding".</param>
         /// <returns>TorrentManager responsible for the torrent.</returns>
-        TorrentManager AddTorrent(Stream torrentMetaData,
+        TorrentManager AddTorrent(byte[] torrentMetaData,
             string savePath, 
             string baseDirectory,
             int uploadSlots,
@@ -35,10 +35,10 @@ namespace MonoTorrent.WebUI.Common
         /// <summary>
         /// Register the torrent with the MonoTorrent engine.
         /// </summary>
-        /// <param name="torrentMetaData">Stream containing the .torrent file.</param>
+        /// <param name="torrentMetaData">Contents of a .torrent file.</param>
         /// <param name="savePath">Directory where to save the torrent.</param>
         /// <param name="baseDirectory">Directory name for multi-file torrents or file name of the torrent.</param>
-        TorrentManager AddTorrent(Stream torrentMetaData,
+        TorrentManager AddTorrent(byte[] torrentMetaData,
             string savePath,
             string baseDirectory);
 
@@ -70,6 +70,13 @@ namespace MonoTorrent.WebUI.Common
         /// <param name="removeData">True to also remove any downloaded data files.</param>
         /// <returns>False when <paramref name="torrentID"/> is not registered, otherwise true.</returns>
         bool RemoveTorrent(string torrentID, bool removeData);
+
+        /// <summary>
+        /// Recheck the specified torrent's data.
+        /// </summary>
+        /// <param name="torrentInfoHash">Identifier of the torrent.</param>
+        /// <returns>False when <paramref name="torrentInfoHash"/> is not registered, otherwise true.</returns>
+        bool RecheckTorrentData(string torrentInfoHash);
 
         /// <summary>
         /// Stops all torrents.

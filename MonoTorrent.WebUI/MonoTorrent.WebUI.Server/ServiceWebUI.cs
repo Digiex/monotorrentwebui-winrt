@@ -14,7 +14,7 @@ namespace MonoTorrent.WebUI.Server
         /// <summary>
         /// WebUI HTTP server.
         /// </summary>
-        private HttpServerWebUI httpServer = null;
+        private WebUIServer httpServer = null;
         
         /// <summary>
         /// BitTorrent client node controller.
@@ -33,16 +33,7 @@ namespace MonoTorrent.WebUI.Server
             
             this.torrents = torrents;
 
-            InitializeComponent();
-        }
-
-        private void InitializeComponent()
-        {
-            // 
-            // ServiceWebUI
-            // 
             this.ServiceName = "MonoTorrentWebUI";
-
         }
 
         #region Service Control Manager API
@@ -51,13 +42,9 @@ namespace MonoTorrent.WebUI.Server
         {
             base.OnStart(args);
 
-            httpServer = new HttpServerWebUI();
+            httpServer = new WebUIServer(this.torrents);
             
-            httpServer.BuildNumber = Config.BuildNumber;
-            httpServer.ResponseEncoding = Config.ResponseEncoding;
-
             httpServer.StartHttpServer(
-                this.torrents,
                 base.Config
                 );
         }
