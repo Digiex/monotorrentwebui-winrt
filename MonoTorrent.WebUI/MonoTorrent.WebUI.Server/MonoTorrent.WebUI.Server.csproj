@@ -52,7 +52,7 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Configuration\WebUISection.General.cs" />
+    <Compile Include="Configuration\WebUISection.cs" />
     <Compile Include="Configuration\HttpServerSection.cs" />
     <Compile Include="ProjectInstaller.cs">
       <SubType>Component</SubType>
