@@ -28,7 +28,7 @@ namespace MonoTorrent.WebUI.Server
         /// <summary>
         /// Reference to the MonoTorrent engine.
         /// </summary>
-        public ITorrentController torrents;
+        public ITorrentController<string, TorrentManager> torrents;
 
         /// <summary>
         /// Build number reported to WebUI.
@@ -42,7 +42,8 @@ namespace MonoTorrent.WebUI.Server
         /// <summary>
         /// Creates a WebUI server.
         /// </summary>
-        public WebUIServer(ITorrentController torrents) : base()
+        public WebUIServer(ITorrentController<string, TorrentManager> torrents)
+            : base()
         {
             if (torrents == null)
                 throw new ArgumentNullException("torrents");
@@ -166,7 +167,7 @@ namespace MonoTorrent.WebUI.Server
         private static readonly Regex nonCanonicalUrl = new Regex("^/gui([?])?$", RegexOptions.Compiled);
 
         /// <summary>
-        /// Redirects URL requests with missing slashes
+        /// Redirects ListeningAddress requests with missing slashes
         /// </summary>
         private bool RedirectToCanonicalUrl(HttpListenerContext context)
         {
@@ -413,7 +414,7 @@ namespace MonoTorrent.WebUI.Server
             writer.WritePropertyName("hash");               //HASH (string)
             writer.WriteValue(hash);
 
-            TorrentManager details = torrents.GetTorrentManager(hash);
+            TorrentManager details = torrents.GetTorrent(hash);
 
             if (details != null)
             {
@@ -451,7 +452,7 @@ namespace MonoTorrent.WebUI.Server
         /// </summary>
         private void PrintTorrentFiles(JsonWriter writer, string hash)
         {
-            TorrentManager details = torrents.GetTorrentManager(hash);
+            TorrentManager details = torrents.GetTorrent(hash);
 
             writer.WritePropertyName("files");
             writer.WriteStartArray();
@@ -514,7 +515,7 @@ namespace MonoTorrent.WebUI.Server
             writer.WritePropertyName("torrents");
             writer.WriteStartArray();
 
-            foreach (KeyValuePair<string, TorrentManager> pair in torrents.TorrentManagers)
+            foreach (KeyValuePair<string, TorrentManager> pair in torrents.Torrents)
             {
                 string hash = pair.Key;
                 TorrentManager torrent = pair.Value;
@@ -585,9 +586,9 @@ namespace MonoTorrent.WebUI.Server
                     parsedIndeces.Add(index);
             }
 
-            torrents.SetFilePriority(hash,
+            torrents.SetFilePriorities(hash,
                 parsedIndeces.ToArray(),
-                WebUtil.PriorityAdapter(priority));
+                (int)WebUtil.PriorityAdapter(priority));
         }
 
         /// <summary>
@@ -694,7 +695,7 @@ namespace MonoTorrent.WebUI.Server
         }
 
         /// <summary>
-        /// Fetches .torrent file from a URL and adds it.
+        /// Fetches .torrent file from a ListeningAddress and adds it.
         /// </summary>
         private void AddTorrentFromUrl(string url)
         {

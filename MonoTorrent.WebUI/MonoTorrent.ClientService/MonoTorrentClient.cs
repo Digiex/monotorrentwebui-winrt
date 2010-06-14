@@ -14,7 +14,7 @@ namespace MonoTorrent.ClientService
     /// <summary>
     /// Service running the BitTorrent client, has an API for controlling torrents.
     /// </summary>
-    public class MonoTorrentClient : ConfiguredServiceBase<ClientSection>, ITorrentController
+    public class MonoTorrentClient : ConfiguredServiceBase<ClientSection>, ITorrentController<string, TorrentManager>
     {
         /// <summary>
         /// MonoTorrent client engine.
@@ -342,7 +342,7 @@ namespace MonoTorrent.ClientService
         /// <param name="fileIndexes">Indexes of files to which the priority will be assigned.</param>
         /// <param name="priority">Priority to assign to the specified files.</param>
         /// <returns>False when <paramref name="torrentInfoHash"/> is not registered, otherwise true.</returns>
-        public bool SetFilePriority(string torrentInfoHash, int[] fileIndexes, Priority priority)
+        public bool SetFilePriorities(string torrentInfoHash, int[] fileIndexes, int priority)
         {
             TorrentManager torrent;
             if (!torrents.TryGetValue(torrentInfoHash, out torrent))
@@ -350,7 +350,7 @@ namespace MonoTorrent.ClientService
             
             foreach (int i in fileIndexes)
             {
-                torrent.Torrent.Files[i].Priority = priority;
+                torrent.Torrent.Files[i].Priority = (Priority)priority;
             }
 
             WriteTrace("Torrent \"{0}\" priority set to {1}.", torrent.Torrent.Name, priority);
@@ -364,7 +364,7 @@ namespace MonoTorrent.ClientService
         /// </summary>
         /// <param name="torrentInfoHash">Identifier of the torrent.</param>
         /// <returns>The instance corresponding to the <paramref name="torrentInfoHash"/>, otherwise null.</returns>
-        public TorrentManager GetTorrentManager(string torrentInfoHash)
+        public TorrentManager GetTorrent(string torrentInfoHash)
         {
             TorrentManager mgr;
             if (!torrents.TryGetValue(torrentInfoHash, out mgr))
@@ -425,7 +425,7 @@ namespace MonoTorrent.ClientService
         /// Enumerator for registered identifier:torrents pairs.
         /// TorrentManager should be treated as read-only, use the provided API to control torrents.
         /// </summary>
-        public IEnumerable<KeyValuePair<string, TorrentManager>> TorrentManagers
+        public IEnumerable<KeyValuePair<string, TorrentManager>> Torrents
         {
             get { return torrents; }
         }

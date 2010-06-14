@@ -55,7 +55,7 @@ namespace MonoTorrent.WebUI.Server
         }
 
         /// <summary>
-        /// Base URL of the website, derived from the HTTP listener prefix. (e.g. /gui/)
+        /// Base ListeningAddress of the website, derived from the HTTP listener prefix. (e.g. /gui/)
         /// </summary>
         public string WebSiteUrlBase
         {
@@ -221,7 +221,7 @@ namespace MonoTorrent.WebUI.Server
 
         #region Request Marshalling
         /// <summary>
-        /// Dispatches the request to the appropriate handler based on the URL
+        /// Dispatches the request to the appropriate handler based on the ListeningAddress
         /// </summary>
         private void MarshalRequest(HttpListenerContext context)
         {
@@ -265,7 +265,7 @@ namespace MonoTorrent.WebUI.Server
 
         #region Static File Requests
         /// <summary>
-        /// Writes the file specified in the request URL into the response stream.
+        /// Writes the file specified in the request ListeningAddress into the response stream.
         /// </summary>
         protected virtual void ProcessFileRequest(HttpListenerContext context)
         {

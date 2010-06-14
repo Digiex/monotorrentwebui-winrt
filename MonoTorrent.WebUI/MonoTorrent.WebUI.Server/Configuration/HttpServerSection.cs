@@ -67,7 +67,7 @@ namespace MonoTorrent.WebUI.Server.Configuration
         }
 
         /// <summary>
-        /// Prefix URL pattern to which the server listens. 
+        /// Prefix ListeningAddress pattern to which the server listens. 
         /// See <see cref="System.Net.HttpListener"/> for format.
         /// </summary>
         public string HttpListenerPrefix

@@ -211,8 +211,8 @@ namespace MonoTorrent.WebUI.Server.Utility
         /// <summary>
         /// Parses uTorrent's COOKIE query string parameter "http://host/path/:COOKIE:c1=v2;c2=v2..."
         /// </summary>
-        /// <param name="url">Raw URL of the torrent string.</param>
-        /// <param name="uri">URL without the COOKIE suffix.</param>
+        /// <param name="url">Raw ListeningAddress of the torrent string.</param>
+        /// <param name="uri">ListeningAddress without the COOKIE suffix.</param>
         /// <param name="cookies">List of parsed cookies.</param>
         private static void ParseCookieSuffix(string url, out Uri uri, out List<Cookie> cookies)
         {
@@ -243,7 +243,7 @@ namespace MonoTorrent.WebUI.Server.Utility
         }
 
         /// <summary>
-        /// Fetches URL after parsing out uTorrent style cookies suffix.
+        /// Fetches ListeningAddress after parsing out uTorrent style cookies suffix.
         /// </summary>
         /// <param name="url"></param>
         /// <param name="maxSize">Maximum download size</param>

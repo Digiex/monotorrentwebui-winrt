@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using MonoTorrent.Common;
-using MonoTorrent.Client;
 
 namespace MonoTorrent.WebUI.Common
 {
     /// <summary>
-    /// Interface for a BitTorrent client.
+    /// Interface for a BitTorrent client. Used to decouple the BT library form the application.
     /// </summary>
-    public interface ITorrentController
+    public interface ITorrentController<TTorrentID, TTorrent>
+        where TTorrentID : IComparable<TTorrentID>, IEquatable<TTorrentID>
     {
         /// <summary>
         /// Register the torrent with the MonoTorrent engine.
@@ -23,7 +21,7 @@ namespace MonoTorrent.WebUI.Common
         /// <param name="maxUploadSpeed">The maximum upload speed for this torrent.</param>
         /// <param name="initialSeedingEnabled">True to enable "super-seeding".</param>
         /// <returns>TorrentManager responsible for the torrent.</returns>
-        TorrentManager AddTorrent(byte[] torrentMetaData,
+        TTorrent AddTorrent(byte[] torrentMetaData,
             string savePath, 
             string baseDirectory,
             int uploadSlots,
@@ -38,7 +36,7 @@ namespace MonoTorrent.WebUI.Common
         /// <param name="torrentMetaData">Contents of a .torrent file.</param>
         /// <param name="savePath">Directory where to save the torrent.</param>
         /// <param name="baseDirectory">Directory name for multi-file torrents or file name of the torrent.</param>
-        TorrentManager AddTorrent(byte[] torrentMetaData,
+        TTorrent AddTorrent(byte[] torrentMetaData,
             string savePath,
             string baseDirectory);
 
@@ -47,21 +45,21 @@ namespace MonoTorrent.WebUI.Common
         /// </summary>
         /// <param name="torrentID">Identifier of the torrent.</param>
         /// <returns>False when <paramref name="torrentID"/> is not registered, otherwise true.</returns>
-        bool StartTorrent(string torrentID);
+        bool StartTorrent(TTorrentID torrentID);
 
         /// <summary>
         /// Pauses the specified torrent.
         /// </summary>
         /// <param name="torrentID">Identifier of the torrent.</param>
         /// <returns>False when <paramref name="torrentID"/> is not registered, otherwise true.</returns>
-        bool PauseTorrent(string torrentID);
+        bool PauseTorrent(TTorrentID torrentID);
 
         /// <summary>
         /// Stops the specified torrent.
         /// </summary>
         /// <param name="torrentID">Identifier of the torrent.</param>
         /// <returns>False when <paramref name="torrentID"/> is not registered, otherwise true.</returns>
-        bool StopTorrent(string torrentID);
+        bool StopTorrent(TTorrentID torrentID);
 
         /// <summary>
         /// Removes the specified torrent.
@@ -69,7 +67,7 @@ namespace MonoTorrent.WebUI.Common
         /// <param name="torrentID">Identifier of the torrent.</param>
         /// <param name="removeData">True to also remove any downloaded data files.</param>
         /// <returns>False when <paramref name="torrentID"/> is not registered, otherwise true.</returns>
-        bool RemoveTorrent(string torrentID, bool removeData);
+        bool RemoveTorrent(TTorrentID torrentID, bool removeData);
 
         /// <summary>
         /// Recheck the specified torrent's data.
@@ -100,7 +98,7 @@ namespace MonoTorrent.WebUI.Common
         /// <param name="fileIndexes">Indexes of files to which the priority will be assigned.</param>
         /// <param name="priority">Priority to assign to the specified files.</param>
         /// <returns>False when <paramref name="torrentID"/> is not registered, otherwise true.</returns>
-        bool SetFilePriority(string torrentID, int[] fileIndexes, Priority priority);
+        bool SetFilePriorities(TTorrentID torrentID, int[] fileIndexes, int priority);
 
         /// <summary>
         /// Retrieves the torrent manager based on the identifier string.
@@ -108,7 +106,7 @@ namespace MonoTorrent.WebUI.Common
         /// </summary>
         /// <param name="torrentID">Identifier of the torrent.</param>
         /// <returns>The instance corresponding to the <paramref name="torrentID"/>, otherwise null.</returns>
-        TorrentManager GetTorrentManager(string torrentID);
+        TTorrent GetTorrent(TTorrentID torrentID);
 
         /// <summary>
         /// Sets the category label for the specified torrent.
@@ -116,7 +114,7 @@ namespace MonoTorrent.WebUI.Common
         /// <param name="torrentID">Identifier of the torrent.</param>
         /// <param name="label">Category label to set.</param>
         /// <returns>False when <paramref name="torrentID"/> is not registered, otherwise true.</returns>
-        bool SetTorrentLabel(string torrentID, string label);
+        bool SetTorrentLabel(TTorrentID torrentID, string label);
 
         /// <summary>
         /// Returns a list of torrent labels and the number of torrents using that label.
@@ -132,7 +130,7 @@ namespace MonoTorrent.WebUI.Common
         /// Enumerator for registered identifier:torrents pairs.
         /// TorrentManager should be treated as read-only, use the provided API to control torrents.
         /// </summary>
-        IEnumerable<KeyValuePair<string, TorrentManager>> TorrentManagers { get; }
+        IEnumerable<KeyValuePair<TTorrentID, TTorrent>> Torrents { get; }
 
         #region Parameters
         int MaxDownloadRate { get; set; }

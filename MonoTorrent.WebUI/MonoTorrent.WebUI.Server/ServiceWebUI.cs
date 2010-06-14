@@ -3,6 +3,7 @@ using System.Diagnostics;
 using MonoTorrent.WebUI.Common;
 using MonoTorrent.WebUI.Configuration;
 using MonoTorrent.WebUI.Server.Configuration;
+using MonoTorrent.Client;
 
 namespace MonoTorrent.WebUI.Server
 {
@@ -19,13 +20,13 @@ namespace MonoTorrent.WebUI.Server
         /// <summary>
         /// BitTorrent client node controller.
         /// </summary>
-        private ITorrentController torrents;
+        private ITorrentController<string, TorrentManager> torrents;
 
         /// <summary>
         /// Initializes a service which will expose a WebUI for the <paramref name="monoTorrentClient"/> instance.
         /// </summary>
         /// <param name="monoTorrentClient">BitTorrent client to be exposed by WebUI.</param>
-        public ServiceWebUI(ITorrentController torrents)
+        public ServiceWebUI(ITorrentController<string, TorrentManager> torrents)
             : base(WebUISection.SectionName)
         {
             if (torrents == null)
@@ -44,9 +45,12 @@ namespace MonoTorrent.WebUI.Server
 
             httpServer = new WebUIServer(this.torrents);
             
-            httpServer.StartHttpServer(
-                base.Config
-                );
+            httpServer.StartHttpServer(base.Config);
+        }
+
+        public string ListeningAddress
+        {
+            get { return Config.HttpListenerPrefix; }
         }
 
         protected override void OnStop()

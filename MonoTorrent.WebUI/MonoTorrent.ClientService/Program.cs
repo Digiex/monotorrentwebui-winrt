@@ -33,7 +33,7 @@ namespace MonoTorrent.ClientService
 
             Trace.WriteLine("Starting WebUI...");
             webUI.DebugStart();
-            Trace.WriteLine("WebUI running.");
+            Trace.WriteLine("WebUI running on " + webUI.ListeningAddress + ".");
             
             Console.WriteLine("(Press ESC to halt)");
             while (Console.ReadKey().Key != ConsoleKey.Escape) { }

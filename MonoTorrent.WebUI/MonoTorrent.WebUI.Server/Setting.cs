@@ -17,7 +17,7 @@ namespace MonoTorrent.WebUI.Server
     internal delegate object SettingGetter();
 
     /// <summary>
-    /// Ecapsulates the logic needed to 
+    /// Ecapsulates the logic needed to set and retrieve the value of a setting.
     /// </summary>
     internal class Setting
     {

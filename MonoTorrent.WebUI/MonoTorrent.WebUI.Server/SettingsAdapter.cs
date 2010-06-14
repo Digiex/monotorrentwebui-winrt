@@ -22,7 +22,7 @@ namespace MonoTorrent.WebUI.Server
         /// <summary>
         /// BitTorrent node controller interface.
         /// </summary>
-        private ITorrentController torrent;
+        private ITorrentController<string, TorrentManager> torrent;
 
         /// <summary>
         /// Handlers for each setting.
@@ -32,9 +32,7 @@ namespace MonoTorrent.WebUI.Server
         /// <summary>
         /// Dispatches and applies WebUI settings where they belong in the system.
         /// </summary>
-		public SettingsAdapter(
-            WebUISection config,
-            ITorrentController torrent)
+        public SettingsAdapter(WebUISection config, ITorrentController<string, TorrentManager> torrent)
 		{
             this.handlers = new Dictionary<string, Setting>();
 
@@ -50,10 +48,10 @@ namespace MonoTorrent.WebUI.Server
         private void InitializeSettingMappings()
         {
             //Usage:
-            /*                [WebUI name]   [type of value]
+            /*              [WebUI name]   [type of value]
             RegisterSetting("max_dl_rate", WebSettingType.Integer,
-                ()    => torrent.MaxDownloadRate,                   // [getter function]
-                value => torrent.MaxDownloadRate = int.Parse(value) // [setter function]
+                ()    => torrent.MaxDownloadRate,                   // [getter function/lambda]
+                value => torrent.MaxDownloadRate = int.Parse(value) // [setter function/lambda]
                 );
             */
 
