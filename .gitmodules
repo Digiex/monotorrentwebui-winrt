@@ -1,0 +1,3 @@
+[submodule "monotorrent-winrt"]
+	path = monotorrent-winrt
+	url = https://github.com/Digiex/monotorrent-winrt.git
