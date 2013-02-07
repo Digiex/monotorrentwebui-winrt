@@ -1,6 +1,6 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoTorrent.ClientService", "MonoTorrent.ClientService\MonoTorrent.ClientService.csproj", "{FA02B877-30A8-4418-8C61-6A943B8A2000}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoTorrent.WebUI.Common", "MonoTorrent.WebUI.Common\MonoTorrent.WebUI.Common.csproj", "{A0931AC0-6C1E-4713-8E1A-46A701227B84}"
@@ -9,25 +9,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoTorrent.WebUI.Server", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoTorrent.WebUI.Configuration", "MonoTorrent.WebUI.Configuration\MonoTorrent.WebUI.Configuration.csproj", "{9ADC4AA3-EFBC-481D-BC19-572B16657C39}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoTorrent", "..\monotorrent-winrt\src\MonoTorrent\MonoTorrent.csproj", "{411A9E0E-FDC6-4E25-828A-0C2CD1CD96F8}"
+EndProject
 Global
-	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 5
-		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
-		SccTeamFoundationServer = https://tfs09.codeplex.com/
-		SccLocalPath0 = .
-		SccProjectUniqueName1 = MonoTorrent.ClientService\\MonoTorrent.ClientService.csproj
-		SccProjectName1 = MonoTorrent.ClientService
-		SccLocalPath1 = MonoTorrent.ClientService
-		SccProjectUniqueName2 = MonoTorrent.WebUI.Common\\MonoTorrent.WebUI.Common.csproj
-		SccProjectName2 = MonoTorrent.WebUI.Common
-		SccLocalPath2 = MonoTorrent.WebUI.Common
-		SccProjectUniqueName3 = MonoTorrent.WebUI.Server\\MonoTorrent.WebUI.Server.csproj
-		SccProjectName3 = MonoTorrent.WebUI.Server
-		SccLocalPath3 = MonoTorrent.WebUI.Server
-		SccProjectUniqueName4 = MonoTorrent.WebUI.Configuration\\MonoTorrent.WebUI.Configuration.csproj
-		SccProjectName4 = MonoTorrent.WebUI.Configuration
-		SccLocalPath4 = MonoTorrent.WebUI.Configuration
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
@@ -58,6 +42,12 @@ Global
 		{9ADC4AA3-EFBC-481D-BC19-572B16657C39}.Release|Any CPU.Build.0 = Release|Any CPU
 		{9ADC4AA3-EFBC-481D-BC19-572B16657C39}.Stats|Any CPU.ActiveCfg = Release|Any CPU
 		{9ADC4AA3-EFBC-481D-BC19-572B16657C39}.Stats|Any CPU.Build.0 = Release|Any CPU
+		{411A9E0E-FDC6-4E25-828A-0C2CD1CD96F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{411A9E0E-FDC6-4E25-828A-0C2CD1CD96F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{411A9E0E-FDC6-4E25-828A-0C2CD1CD96F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{411A9E0E-FDC6-4E25-828A-0C2CD1CD96F8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{411A9E0E-FDC6-4E25-828A-0C2CD1CD96F8}.Stats|Any CPU.ActiveCfg = Stats|Any CPU
+		{411A9E0E-FDC6-4E25-828A-0C2CD1CD96F8}.Stats|Any CPU.Build.0 = Stats|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

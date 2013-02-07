@@ -201,7 +201,7 @@ namespace MonoTorrent.WebUI.Server
             context.Response.ContentEncoding = ResponseEncoding;
 
             using (TextWriter writer = new StreamWriter(context.Response.OutputStream, ResponseEncoding))
-            using (JsonWriter json = new JsonWriter(writer))
+            using (JsonTextWriter json = new JsonTextWriter(writer))
             {
                 json.WriteStartObject();
 

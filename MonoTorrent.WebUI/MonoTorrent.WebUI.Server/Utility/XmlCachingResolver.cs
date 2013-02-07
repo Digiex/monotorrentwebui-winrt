@@ -46,15 +46,23 @@ namespace MonoTorrent.WebUI.Server.Utility
 
         private object WebFetch(Uri absoluteUri)
         {
-            WebRequest webReq = WebRequest.Create(absoluteUri);
-            webReq.CachePolicy = new RequestCachePolicy(RequestCacheLevel.Default);
+            try
+            {
+                WebRequest webReq = WebRequest.Create(absoluteUri);
+                webReq.CachePolicy = new RequestCachePolicy(RequestCacheLevel.Default);
 
-            if (credentials != null)
-                webReq.Credentials = credentials;
+                if (credentials != null)
+                    webReq.Credentials = credentials;
 
-            WebResponse resp = webReq.GetResponse();
+                WebResponse resp = webReq.GetResponse();
 
-            return resp.GetResponseStream();
+                return resp.GetResponseStream();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return null;
+            }
         }
 
         private static bool IsStreamType(Type ofObjectToReturn)
